@@ -49,7 +49,7 @@ function [DeltaV, omf, theta] = changeOrbitalPlane(a, e, i_i, OMi, omi, i_f, OMf
     % 4. Switch per le logiche specifiche dei 4 casi
     switch caso
         case 1
-            cos_ui =  (cos(i_f) - cos(alpha)*cos(i_i)) / (sin(alpha)*sin(i_i));
+            cos_ui =  (-cos(i_f) + cos(alpha)*cos(i_i)) / (sin(alpha)*sin(i_i));
             cos_uf =  (cos(i_i) - cos(alpha)*cos(i_f)) / (sin(alpha)*sin(i_f));
             
             u_i = atan2(sin_ui, cos_ui);
