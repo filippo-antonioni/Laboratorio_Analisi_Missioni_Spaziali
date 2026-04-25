@@ -9,9 +9,12 @@ function dv = objective_function(x, ast)
     R_sun = 696340;            % Raggio Sole [km]
     AU = 149597870.7;          % Unità Astronomica [km]
     
-    % Parametri orbitali della Terra (Approssimazione circolare/eclittica o usa i tuoi veri)
-    % Se hai i dati esatti della Terra del tuo Lab, inseriscili qui.
-    a_terra = 1.0 * AU; e_terra = 0; i_terra = 0; OM_terra = 0; om_terra = 0;
+    % Parametri orbitali della Terra
+    a_terra = 1.4946e8; 
+    e_terra = 0.016; 
+    i_terra = 9.1920e-5; 
+    OM_terra = 2.7847; 
+    om_terra = 5.2643;
     
     % =====================================================================
     % STEP 1: Calcolo Posizione e Velocità su orbita iniziale e finale
@@ -23,21 +26,20 @@ function dv = objective_function(x, ast)
     [r2, v2] = par2car(ast.a, ast.e, ast.i, ast.OM, ast.om, th2_f, mu_sun);
     
     % =====================================================================
-    % STEP 2: Definizione del piano di trasferimento [Slide 13]
+    % STEP 2: Definizione del piano di trasferimento
     % =====================================================================
     h_vect = cross(r1, r2);
     norm_h = norm(h_vect);
     
-    % Protezione contro orbite a 180° spaccati (collineari, h_vect = 0)
     if norm_h < 1e-6
         dv = 1e6; return; 
     end
     
-    h_T = h_vect / norm_h; % Versore normale al piano [cite: 181]
+    h_T = h_vect / norm_h; % Versore normale al piano
     
-    i_T = acos(h_T(3)); % Inclinazione [cite: 183]
+    i_T = acos(h_T(3)); % Inclinazione
     
-    % Calcolo della Linea dei Nodi e RAAN [cite: 185, 187]
+    % Calcolo della Linea dei Nodi e RAAN
     K = [0; 0; 1];
     N_vect = cross(K, h_T);
     N_T = N_vect / norm(N_vect);
@@ -49,34 +51,33 @@ function dv = objective_function(x, ast)
     end
     
     % =====================================================================
-    % STEP 3: Sistema Perifocale e Anomalie di Trasferimento [Slide 14]
+    % STEP 3: Sistema Perifocale e Anomalie di Trasferimento
     % =====================================================================
-    % Matrici di rotazione per passare da Inerziale a Perifocale [cite: 193]
+    % Matrici di rotazione per passare da Inerziale a Perifocale
     R_OM = [cos(OM_T) sin(OM_T) 0; -sin(OM_T) cos(OM_T) 0; 0 0 1];
     R_i  = [1 0 0; 0 cos(i_T) sin(i_T); 0 -sin(i_T) cos(i_T)];
     R_om = [cos(om_T) sin(om_T) 0; -sin(om_T) cos(om_T) 0; 0 0 1];
     
     T_matrix = R_om * R_i * R_OM; 
     
-    % Posizioni nel sistema perifocale [cite: 195]
+    % Posizioni nel sistema perifocale
     r1_PF = T_matrix * r1;
     r2_PF = T_matrix * r2;
     
-    % Anomalie vere sull'orbita di trasferimento [cite: 197-202]
+    % Anomalie vere sull'orbita di trasferimento
     th1_T = atan2(r1_PF(2), r1_PF(1));
     th2_T = atan2(r2_PF(2), r2_PF(1));
     
     % =====================================================================
-    % STEP 4: Forma dell'orbita di Trasferimento (a_T, e_T) [Slide 15]
+    % STEP 4: Forma dell'orbita di Trasferimento (a_T, e_T)
     % =====================================================================
     r1_mag = norm(r1);
     r2_mag = norm(r2);
     
-    % Ricavo l'eccentricità eguagliando l'equazione della conica [cite: 208]
+    % Ricavo l'eccentricità eguagliando l'equazione della conica
     num_e = r2_mag - r1_mag;
     den_e = r1_mag * cos(th1_T) - r2_mag * cos(th2_T);
     
-    % Protezione contro divisioni per zero
     if abs(den_e) < 1e-6
         dv = 1e6; return;
     end
@@ -88,12 +89,12 @@ function dv = objective_function(x, ast)
         dv = 1e6; return;
     end
     
-    % Calcolo il semiasse maggiore [cite: 209]
+    % Calcolo il semiasse maggiore
     a_T = (r1_mag * (1 + e_T * cos(th1_T))) / (1 - e_T^2);
     
     % Controllo di sicurezza: non schiantarsi sul Sole
     rp_T = a_T * (1 - e_T);
-    if rp_T < (R_sun + 100000) % Aggiungo 100.000 km di margine
+    if rp_T < (R_sun + 50000000) % Aggiungo 50.000.000 km di margine
         dv = 1e6; return;
     end
     

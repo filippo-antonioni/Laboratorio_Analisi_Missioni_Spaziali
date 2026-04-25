@@ -52,11 +52,13 @@ ub = [2*pi, 2*pi, 2*pi];
 
 % --- FASE 1: RICERCA GLOBALE CON GA --- [cite: 120]
 fprintf('Fase 1: Avvio Algoritmo Genetico...\n');
-ga_opts = optimoptions('ga', 'PopulationSize', 150, 'MaxGenerations', 50, 'Display', 'iter');
+ga_opts = optimoptions('ga', 'PopulationSize', 200, 'MaxGenerations', 100, 'Display', 'iter');
 
 % Definiamo la funzione anonima per passare i dati dell'asteroide
 obj_fun = @(x) objective_function(x, ast);
 
+% Non passo @(x)constraints per alleggerire il codice, altrimenti si
+% dovrebbe calcolare una funzione di vincolo per ogni individuo
 [x_ga, fval_ga] = ga(obj_fun, 3, [], [], [], [], lb, ub, [], ga_opts);
 
 % --- FASE 2: RIFINITURA LOCALE CON FMINCON --- 
