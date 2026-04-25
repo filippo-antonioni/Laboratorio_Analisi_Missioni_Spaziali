@@ -4,47 +4,23 @@ clc
 
 mu = 398600;
 
-%parametri orbita eliocentrica iniziale
-a_i=1.4946*1e8; %semiasse maggiore 
-e_i=0.016;
-i_i=9.1920*1e-5;
-OM_i=2.7847;
-om_i=5.2643;
-
-
 % Dati dell'asteroide 363505 (2003 UC20) 
 
 % Costante di conversione
 AU_to_km = 149597870.7; % Unità Astronomica in km
 
-% --- Parametri Orbitali ---
-% Il semiasse maggiore originale era 0.781241 AU
-a_f= 0.781241 * AU_to_km;  % Semiasse maggiore in [km] (Risultato: ~1.1687e+08 km)
-e_f= 0.336932;             % Eccentricità
-i_f = 3.78;                 % Inclinazione in [deg]
-OM_f = 187.92;              % Longitudine del nodo ascendente (RAAN) in [deg]
-om_f= 60.16;               % Argomento del pericentro in [deg]
-
 % --- Parametri Fisici ---
 M = 6.9140e12;            % Massa in [kg]
 D = 1.88;                 % Diametro in [km]
 
-% dth = 0.05;
-% th_vec = 0:dth:2*pi;
-% plotOrbit(a_i, e_i, i_i, OM_i, om_i, 0, 2*pi, dth, mu)
-% hold on;
-% plotOrbit(a_f, e_f, i_f, OM_f, om_f, 0, 2*pi, dth, mu)
-% legend('Orbita iniziale','Orbita asteroide','Location','bestoutside');
-% figure;
-% plotOrbit_sole(a_i, e_i, i_i, OM_i, om_i, 0, 2*pi, dth, mu);
-
-
+% --- Parametri Orbitali ---
 AU = 149597870.7;
 ast.a = 0.781241 * AU; 
 ast.e = 0.336932;
 ast.i = deg2rad(3.78);
 ast.OM = deg2rad(187.92);
 ast.om = deg2rad(60.16);
+
 % 2. CONFIGURAZIONE OTTIMIZZAZIONE
 % Variabili x = [theta1_partenza, theta2_arrivo, omega_trasferimento]
 lb = [0, 0, 0];
