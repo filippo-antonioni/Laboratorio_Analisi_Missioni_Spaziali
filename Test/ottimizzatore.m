@@ -7,8 +7,8 @@ T = load("DatiSC1-2026.txt");
 mu = 398600;
 
 % Orbita finale/target
-rr_f = T(23,8:10)';
-vv_f = T(23,11:13)';
+rr_f = T(27,8:10)';
+vv_f = T(27,11:13)';
 [a_f, e_f, i_f, OM_f, om_f, th_f] = car2par(rr_f, vv_f, mu);
 
 % Orbita iniziale
