@@ -130,7 +130,7 @@ function plotTransfer(state1, type1, state2, type2, maneuver, mu, varargin)
             error('Manovra non riconosciuta. Usa: pa, ap, pp, aa, bielliptic, plane_change, pericenter_change.');
     end
     
-    % --- 5. Disegna la Terra 3D (Mantengo fedelmente il tuo blocco di codice) ---
+    % --- 5. Disegna la Terra 3D
     R_earth = 6371; 
     [xE, yE, zE] = sphere(50); 
     
