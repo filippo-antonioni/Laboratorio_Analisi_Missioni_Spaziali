@@ -8,7 +8,7 @@ function [c, ceq] = constraints(x, ast)
     
     % Vincoli di disuguaglianza (c <= 0)
     c(1) = eT - 0.999;      % Deve essere ellittica [cite: 159]
-    c(2) = (R_sun + 1e6) - rpT; % Non colpire il Sole [cite: 161]
+    c(2) = (R_sun + 5e7) - rpT; % Non colpire il Sole [cite: 161]
     
     ceq = []; % Nessun vincolo di uguaglianza
 end

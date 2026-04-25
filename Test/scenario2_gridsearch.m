@@ -8,7 +8,7 @@ clear; clc; close all;
 mu_sun  = 1.32712440018e11; % Parametro gravitazionale del Sole [km^3/s^2]
 R_sun   = 696340;           % Raggio del Sole [km]
 AU      = 149597870.7;      % 1 Unità Astronomica [km]
-margine = 500000;           % Margine di sicurezza per evitare il Sole [km]
+margine = 50000000;           % Margine di sicurezza per evitare il Sole [km] -> Per evitare sublimazione dei materiali
 
 % Dati Terra (da Scenario #2 slide 5)
 a_T  = 1.4946e8;     
@@ -25,9 +25,9 @@ OM_A = 187.92 * (pi/180);
 om_A = 60.16 * (pi/180);    
 
 % --- 2. PARAMETRI DI OTTIMIZZAZIONE ITERATIVA ---
-tolleranza_DV = 0.001; % Tolleranza per fermare la ricerca [km/s]
+tolleranza_DV = 0.0001; % Tolleranza per fermare la ricerca [km/s]
 max_iter      = 10;    % Numero massimo di iterazioni (zoom-in) per sicurezza
-N_punti       = 200;    % Punti per griglia (200^3 = ~8.000.000 iterazioni a ciclo)
+N_punti       = 300;    % Punti per griglia (300^3 = ~27.000.000 iterazioni a ciclo)
 
 % Centri iniziali e ampiezze (partiamo esplorando tutto il cerchio da 0 a 2*pi)
 centro_th1 = pi; ampiezza_th1 = pi; 
