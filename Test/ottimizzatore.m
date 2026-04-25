@@ -2,6 +2,8 @@ clear
 close all
 clc
 
+%  Ottimizzatore 
+
 % --- 1. CARICAMENTO DATI ---
 T = load("DatiSC1-2026.txt");
 mu = 398600;
