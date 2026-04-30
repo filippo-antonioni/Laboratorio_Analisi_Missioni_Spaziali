@@ -99,7 +99,7 @@ function dv = objective_function(x, ast)
     end
     
     % =====================================================================
-    % STEP 5: Calcolo Velocità e Delta V [Slide 15]
+    % STEP 5: Calcolo Velocità e Delta V 
     % =====================================================================
     % Ora che ho [a_T, e_T, i_T, OM_T, om_T], uso di nuovo par2car per trovare 
     % le velocità ai punti 1 e 2 sull'orbita di trasferimento [cite: 212-214]
@@ -107,7 +107,7 @@ function dv = objective_function(x, ast)
     [~, v1_T] = par2car(a_T, e_T, i_T, OM_T, om_T, th1_T, mu_sun);
     [~, v2_T] = par2car(a_T, e_T, i_T, OM_T, om_T, th2_T, mu_sun);
     
-    % Calcolo il Delta V totale vettoriale [cite: 217]
+    % Calcolo il Delta V totale vettoriale 
     dV1 = norm(v1_T - v1);
     dV2 = norm(v2 - v2_T);
     

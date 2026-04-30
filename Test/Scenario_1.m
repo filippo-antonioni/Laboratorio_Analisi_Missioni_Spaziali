@@ -5,17 +5,17 @@ clc
 % --- 1. CARICAMENTO DATI ---
 T = load("DatiSC1-2026.txt");
 mu = 398600;
-
+gruppo=23;
 % Orbita target/finale (vettori di stato)
-rr_f = T(23,8:10)';
-vv_f = T(23,11:13)';
+rr_f = T(gruppo,8:10)';
+vv_f = T(gruppo,11:13)';
 state_f = [rr_f; vv_f];
 
 % Trasformazione per avere i parametri kepleriani bersaglio
 [a_f, e_f, i_f, OM_f, om_f, th_f] = car2par(rr_f, vv_f, mu);
 
 % Orbita iniziale (parametri kepleriani dal file)
-orbita_iv = T(23,2:7);
+orbita_iv = T(gruppo,2:7);
 a_i  = orbita_iv(1);
 e_i  = orbita_iv(2);
 i_i  = orbita_iv(3);
@@ -175,4 +175,7 @@ plot3(r_man4(1), r_man4(2), r_man4(3), 'p', 'MarkerSize', 12, 'MarkerFaceColor',
 legend('show', 'Location', 'best');
 view(3);
 hold off;
+
+
+
 

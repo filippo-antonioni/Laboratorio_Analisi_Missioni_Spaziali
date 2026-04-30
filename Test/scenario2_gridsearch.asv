@@ -24,6 +24,14 @@ i_A  = 3.78 * (pi/180);
 OM_A = 187.92 * (pi/180);   
 om_A = 60.16 * (pi/180);    
 
+a_f = 1.066293 * 149597870.7; % porto in km
+% e_f = 0.315212;
+% i_f = 8.51;%in gradi
+% i_f = deg2rad(i_f);
+% OM_f = 205.8;
+% OM_f = deg2rad(OM_f);
+% om_f = 172.04;
+% om_f = deg2rad(om_f);
 
 % --- 2. PARAMETRI DI OTTIMIZZAZIONE ITERATIVA ---
 tolleranza_DV = 0.0001; % Tolleranza per fermare la ricerca [km/s]

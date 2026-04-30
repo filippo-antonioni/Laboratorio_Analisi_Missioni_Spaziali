@@ -1,0 +1,351 @@
+clear
+close all
+clc
+
+% --- 1. CARICAMENTO DATI ---
+T = load("DatiSC1-2026.txt");
+mu = 398600;
+
+% Orbita target/finale (vettori di stato)
+rr_f = T(23,8:10)';
+vv_f = T(23,11:13)';
+state_f = [rr_f; vv_f];
+
+% Trasformazione per avere i parametri kepleriani bersaglio
+[a_f, e_f, i_f, OM_f, om_f, th_f] = car2par(rr_f, vv_f, mu);
+
+% Orbita iniziale (parametri kepleriani dal file)
+orbita_iv = T(23,2:7);
+a_i  = orbita_iv(1);
+e_i  = orbita_iv(2);
+i_i  = orbita_iv(3);
+OM_i = orbita_iv(4);
+om_i = orbita_iv(5);
+th_i = orbita_iv(6);
+
+state_i = [a_i e_i i_i OM_i om_i th_i]';
+
+% --- 2. CALCOLO MANOVRE ---
+delta_v = [];
+delta_t = [];
+type_v = ['ap'; 'pa'; 'aa'; 'pp'];
+
+
+
+
+% 2.1 Calcolo i costi di tutti i trasferimenti bitangenti
+for k = 1:4 
+    type = type_v(k,:);
+    [DeltaV1, DeltaV2, Deltat] = bitangentTransfer(a_i, e_i, a_f, e_f, type, mu);
+    % Sommo i valori assoluti perché rappresentano il propellente consumato
+    delta_v = [delta_v; abs(DeltaV1) + abs(DeltaV2)]; 
+    delta_t = [delta_t; Deltat];
+end
+
+
+
+% SELEZIONA IL TIPO DI MANOVRA BITANGENTE DA VISUALIZZARE
+% (1='ap', 2='pa', 3='aa', 4='pp')
+indice_scelto = 2; 
+tipo_scelto = type_v(indice_scelto, :);
+
+deltav_bitang = delta_v(indice_scelto);
+deltat_bitang = delta_t(indice_scelto);
+
+% 2.2 Cambio di Piano 
+% Ottiene om_fun, la nuova anomalia del pericentro forzata dalla geometria sferica
+[deltav_plane, om_fun, theta] = changeOrbitalPlane(a_f, e_f, i_i, OM_i, om_i, i_f, OM_f, mu);
+
+% 2.3 Cambio Anomalia Pericentro 
+% Ruoto il pericentro partendo da om_fun fino al bersaglio finale om_f
+[deltav_arg, thi_fun, thf_fun] = changePericenterArg(a_f, e_f, om_fun, om_f, mu);
+
+% Costo totale della sequenza
+DeltaV_Tot = deltav_bitang + deltav_plane + deltav_arg;
+
+fprintf('\n--- RISULTATI MANOVRA (Sequenza Bitangente: %s) ---\n', tipo_scelto);
+fprintf('DeltaV Bitangente:        %.4f km/s\n', deltav_bitang);
+fprintf('DeltaV Cambio Piano:      %.4f km/s\n', deltav_plane);
+fprintf('DeltaV Cambio Pericen.:   %.4f km/s\n', deltav_arg);
+fprintf('DELTAV TOTALE:            %.4f km/s\n\n', DeltaV_Tot);
+
+
+% --- 4. CALCOLO DEL TEMPO DI VOLO TOTALE (Fasi di attesa) ---
+
+% 1. Determiniamo l'anomalia vera in cui arriviamo dopo il bitangente
+% (Se partiamo per l'apocentro arriviamo a pi, se partiamo per il pericentro arriviamo a 0)
+switch tipo_scelto
+    case 'pa'
+        th_arrivo_bitang=pi;
+        th_inizio_bitang=0;
+    case 'aa'
+        th_arrivo_bitang=pi;
+        th_inizio_bitang=pi;
+    case 'ap'
+        th_arrivo_bitang = 0;
+        th_inizio_bitang=pi;
+    case 'pp'
+        th_arrivo_bitang = 0;
+        th_inizio_bitang=0;
+    otherwise
+        error('Errore nel type della manovra bitangente');
+
+end
+
+
+% if strcmp(tipo_scelto, 'pa') || strcmp(tipo_scelto, 'aa')
+%     th_arrivo_bitang = pi;
+% else
+%     th_arrivo_bitang = 0;
+% end
+
+% calcolo tempo coasting da th_i a punto in cui faccio il bitang
+deltat_coast1=TOF(a_i,e_i,th_i,th_inizio_bitang,mu);
+
+% 2. Fase di attesa (volo passivo) dall'arrivo del bitangente fino al nodo del cambio piano
+deltat_attesa1 = TOF(a_f, e_f, th_arrivo_bitang, theta, mu);
+
+% 3. Fase di attesa dal cambio piano fino alla rotazione del pericentro
+% Usiamo la prima intersezione utile fornita dalla funzione (thi_fun(1))
+deltat_attesa2 = TOF(a_f, e_f, theta, thi_fun(1), mu);
+
+% tempo per arrivare da theta cambio pericentro fino a theta finale
+deltat_coast3=TOF(a_f,e_f,thf_fun(1),th_f,mu);
+
+% TEMPO DI VOLO TOTALE
+TOF_Totale = deltat_coast1+deltat_bitang + deltat_attesa1 + deltat_attesa2 +deltat_coast3;
+TOF_Totale_giorni = TOF_Totale / (24*3600); % Conversione in giorni
+
+% Aggiungiamo le stampe a schermo
+fprintf('--- RISULTATI TEMPI (Volo Passivo e Attivo) ---\n');
+fprintf('Trasferimento Bitangente: %.2f s (%.2f giorni)\n', deltat_bitang, deltat_bitang/(24*3600));
+fprintf('Attesa 1 (verso il nodo): %.2f s (%.2f giorni)\n', deltat_attesa1, deltat_attesa1/(24*3600));
+fprintf('Attesa 2 (verso manovra): %.2f s (%.2f giorni)\n', deltat_attesa2, deltat_attesa2/(24*3600));
+fprintf('TEMPO DI VOLO TOTALE:     %.2f s (%.2f giorni)\n\n', TOF_Totale, TOF_Totale_giorni);
+
+
+% --- 3. GRAFICA AVANZATA ---
+% Generiamo la scena base con plotTransfer 
+% (Disegna: Terra, Orbita Iniziale blu, Orbita Finale verde e archi di manovra)
+plotTransfer(state_i, 'par', state_f, 'car', tipo_scelto, mu);
+
+hold on;
+dth = 0.05;
+th_vec = 0:dth:2*pi;
+
+% --- AGGIUNTA 1: Orbita post-Bitangente (Linea continua) ---
+% Ha la forma e dimensione finale (a_f, e_f) ma il piano (i_i, OM_i) 
+% e il pericentro (om_i) sono ancora quelli dell'orbita iniziale.
+rr_post_bitang = zeros(3, length(th_vec));
+for k = 1:length(th_vec)
+    [rr_k, ~] = par2car(a_f, e_f, i_i, OM_i, om_i, th_vec(k), mu);
+    rr_post_bitang(:, k) = rr_k;
+end
+plot3(rr_post_bitang(1,:), rr_post_bitang(2,:), rr_post_bitang(3,:), 'm-', 'LineWidth', 1.5, 'DisplayName', 'Orbita post-Bitangente');
+
+% --- AGGIUNTA 2: Orbita post-Cambio Piano (Linea tratteggiata) ---
+% Ha forma a_f, e_f e piano finale i_f, OM_f, ma il pericentro è momentaneamente om_fun.
+rr_intermedia = zeros(3, length(th_vec));
+for k = 1:length(th_vec)
+    [rr_k, ~] = par2car(a_f, e_f, i_f, OM_f, om_fun, th_vec(k), mu);
+    rr_intermedia(:, k) = rr_k;
+end
+plot3(rr_intermedia(1,:), rr_intermedia(2,:), rr_intermedia(3,:), 'c-.', 'LineWidth', 1.5, 'DisplayName', 'Orbita post-Cambio Piano');
+
+% --- AGGIUNTA 3: MARKER DEI PUNTI DI MANOVRA ---
+% Utilizziamo par2car per trovare le coordinate 3D dei punti in cui
+% il satellite accende i motori, usando i parametri orbitali corretti per quella fase.
+
+% 1. Inizio Bitangente (Avviene sull'orbita iniziale, ad anomalia th_inizio_bitang)
+[r_man1, ~] = par2car(a_i, e_i, i_i, OM_i, om_i, th_inizio_bitang, mu);
+plot3(r_man1(1), r_man1(2), r_man1(3), 'o', 'MarkerSize', 8, 'MarkerFaceColor', 'r', 'MarkerEdgeColor', 'k', 'DisplayName', '1: Inizio Bitangente');
+
+% 2. Fine Bitangente (Avviene sull'orbita post-bitangente, ad anomalia th_arrivo_bitang)
+[r_man2, ~] = par2car(a_f, e_f, i_i, OM_i, om_i, th_arrivo_bitang, mu);
+plot3(r_man2(1), r_man2(2), r_man2(3), 's', 'MarkerSize', 8, 'MarkerFaceColor', 'm', 'MarkerEdgeColor', 'k', 'DisplayName', '2: Fine Bitangente');
+
+% 3. Cambio di Piano (Avviene sull'orbita post-bitangente, ad anomalia theta)
+[r_man3, ~] = par2car(a_f, e_f, i_i, OM_i, om_i, theta, mu);
+plot3(r_man3(1), r_man3(2), r_man3(3), '^', 'MarkerSize', 9, 'MarkerFaceColor', 'c', 'MarkerEdgeColor', 'k', 'DisplayName', '3: Cambio Piano');
+
+% 4. Cambio Pericentro (Avviene sull'orbita post-cambio piano, ad anomalia thi_fun(1))
+[r_man4, ~] = par2car(a_f, e_f, i_f, OM_f, om_fun, thi_fun(1), mu);
+plot3(r_man4(1), r_man4(2), r_man4(3), 'p', 'MarkerSize', 12, 'MarkerFaceColor', 'y', 'MarkerEdgeColor', 'k', 'DisplayName', '4: Cambio Pericentro');
+% Aggiorno la visualizzazione
+legend('show', 'Location', 'best');
+view(3);
+hold off;
+
+
+%% Opzione 2: Ottimizzazione Trasferimento con Orbita di Appoggio Estesa
+disp('--- AVVIO OPZIONE 2: Ricerca orbita di trasferimento AMPIA (Grid Search) ---');
+
+% --- 1. CARICAMENTO DATI ---
+T = load("DatiSC1-2026.txt");
+mu = 398600;
+
+% Orbita target/finale
+rr_f = T(23,8:10)'; 
+vv_f = T(23,11:13)';
+[a_f, e_f, i_f, OM_f, om_f, th_f] = car2par(rr_f, vv_f, mu);
+
+% Orbita iniziale
+orbita_iv = T(23,2:7);
+a_i = orbita_iv(1); 
+e_i = orbita_iv(2); 
+i_i = orbita_iv(3);
+OM_i = orbita_iv(4); 
+om_i = orbita_iv(5);
+th_i = orbita_iv(6);
+
+% --- 2. RICERCA DEL MINIMO GLOBALE (Ciclo For) ---
+r_p_i = a_i * (1 - e_i); % Raggio pericentro iniziale
+r_a_i = a_i * (1 + e_i); % Raggio apocentro iniziale
+r_p_f = a_f * (1 - e_f); % Raggio pericentro finale
+
+% Range di esplorazione per il raggio dell'apocentro (fino a 800.000 km)
+r_a_test_vec = linspace(max(r_a_i, r_p_f), 800000, 5000);
+
+DeltaV_minimo = inf;
+fprintf('Scansione di %d orbite di appoggio in corso...\n', length(r_a_test_vec));
+
+for idx = 1:length(r_a_test_vec)
+    r_a_test = r_a_test_vec(idx);
+    
+    % Definiamo l'orbita intermedia (tangente al pericentro iniziale)
+    a_int = (r_p_i + r_a_test) / 2;
+    e_int = (r_a_test - r_p_i) / (r_a_test + r_p_i);
+    
+    if e_int >= 1 || e_int < 0
+        continue; % Scarta le orbite non chiuse
+    end
+    
+    
+    % FASE 1: Bitangente 1 ('pa' - da Pericentro i ad Apocentro int)
+    [dV1_A, dV1_B, dt1] = bitangentTransfer(a_i, e_i, a_int, e_int, 'pa', mu);
+    costo_bitang1 = abs(dV1_A) + abs(dV1_B);
+    
+    % FASE 2: Cambio Piano (sull'orbita intermedia)
+    [dV_plane, om_fun, theta_plane] = changeOrbitalPlane(a_int, e_int, i_i, OM_i, om_i, i_f, OM_f, mu);
+    
+    % FASE 3: Bitangente 2 ('ap' - da Apocentro int a Pericentro f)
+    [dV2_A, dV2_B, dt2] = bitangentTransfer(a_int, e_int, a_f, e_f, 'ap', mu);
+    costo_bitang2 = abs(dV2_A) + abs(dV2_B);
+    
+    % FASE 4: Cambio Anomalia Pericentro (sull'orbita finale)
+    [dV_arg, thi_fun, thf_fun] = changePericenterArg(a_f, e_f, om_fun, om_f, mu);
+    
+    % COSTO TOTALE
+    costo_totale = costo_bitang1 + dV_plane + costo_bitang2 + dV_arg;
+    
+    % Aggiornamento del minimo
+    if costo_totale < DeltaV_minimo
+        DeltaV_minimo = costo_totale;
+        
+        best_a_int = a_int; 
+        best_e_int = e_int;
+        best_dv1 = costo_bitang1;
+        best_dv_plane = dV_plane;
+        best_dv2 = costo_bitang2;
+        best_dv_arg = dV_arg;
+        
+        best_dt1 = dt1;
+        best_dt2 = dt2;
+        best_om_fun = om_fun; 
+        best_theta_plane = theta_plane;
+        [best_thi_fun] = min(thi_fun);
+        best_thf_fun = thf_fun(1);
+    end
+end
+
+% --- 3. CALCOLO DEI TEMPI DI VOLO (TOF) ---
+deltat_coast1 = TOF(a_i, e_i, th_i, 0, mu); % Coasting fino al pericentro iniziale
+deltat_attesa1 = TOF(best_a_int, best_e_int, pi, best_theta_plane, mu); % Da apocentro a nodo
+deltat_attesa2 = TOF(best_a_int, best_e_int, best_theta_plane, pi, mu); % Da nodo di nuovo ad apocentro
+deltat_attesa3 = TOF(a_f, e_f, 0, best_thi_fun, mu); % Da arrivo al pericentro fino al cambio om
+deltat_coast_finale = TOF(a_f, e_f, best_thf_fun, th_f, mu); % Fino alla posizione finale
+
+TOF_Totale = deltat_coast1 + best_dt1 + deltat_attesa1 + deltat_attesa2 + best_dt2 + deltat_attesa3 + deltat_coast_finale;
+TOF_giorni = TOF_Totale / (24*3600);
+
+% --- STAMPE A SCHERMO ---
+fprintf('\n--- RISULTATI OPZIONE 2 (Ottimo con Orbita di Appoggio) ---\n');
+fprintf('Semiasse Orbita Appoggio: %.2f km\n', best_a_int);
+fprintf('Eccentricità Appoggio:    %.4f\n\n', best_e_int);
+
+fprintf('DeltaV Bitangente 1:      %.4f km/s\n', best_dv1);
+fprintf('DeltaV Cambio Piano:      %.4f km/s\n', best_dv_plane);
+fprintf('DeltaV Bitangente 2:      %.4f km/s\n', best_dv2);
+fprintf('DeltaV Cambio Pericen.:   %.4f km/s\n', best_dv_arg);
+fprintf('DELTAV TOTALE:            %.4f km/s\n\n', DeltaV_minimo);
+
+fprintf('--- TEMPI DI VOLO ---\n');
+fprintf('Coasting Iniziale:        %.2f giorni\n', deltat_coast1/(24*3600));
+fprintf('Trasferimento 1 (Salita): %.2f giorni\n', best_dt1/(24*3600));
+fprintf('Attesa (verso il nodo):   %.2f giorni\n', deltat_attesa1/(24*3600));
+fprintf('Attesa (verso discesa):   %.2f giorni\n', deltat_attesa2/(24*3600));
+fprintf('Trasferimento 2 (Disce.): %.2f giorni\n', best_dt2/(24*3600));
+fprintf('Attesa (verso manovra):   %.2f giorni\n', deltat_attesa3/(24*3600));
+fprintf('Coasting Finale:          %.2f giorni\n', deltat_coast_finale/(24*3600));
+fprintf('TEMPO DI VOLO TOTALE:     %.2f giorni\n\n', TOF_giorni);
+
+% --- 4. GRAFICA AVANZATA 3D ---
+figure('Name', 'Opzione 2: Sequenza 4 Manovre con Appoggio', 'NumberTitle', 'off');
+hold on; grid on; axis equal;
+xlabel('X [km]'); ylabel('Y [km]'); zlabel('Z [km]');
+
+th_vec = linspace(0, 2*pi, 300);
+
+% Funzione helper per ottenere le coordinate 3D
+get_c = @(a,e,i,OM,om,th,idx) subsref(par2car(a,e,i,OM,om,th,mu), struct('type','()','subs',{{idx}}));
+
+% 1. Orbita Iniziale
+plot3(arrayfun(@(th) get_c(a_i,e_i,i_i,OM_i,om_i,th,1), th_vec), ...
+      arrayfun(@(th) get_c(a_i,e_i,i_i,OM_i,om_i,th,2), th_vec), ...
+      arrayfun(@(th) get_c(a_i,e_i,i_i,OM_i,om_i,th,3), th_vec), ...
+      'b', 'LineWidth', 1.5, 'DisplayName', '1. Orbita Iniziale');
+
+% 2. Orbita di Appoggio (Post Bitangente 1, Pre Cambio Piano)
+plot3(arrayfun(@(th) get_c(best_a_int,best_e_int,i_i,OM_i,om_i,th,1), th_vec), ...
+      arrayfun(@(th) get_c(best_a_int,best_e_int,i_i,OM_i,om_i,th,2), th_vec), ...
+      arrayfun(@(th) get_c(best_a_int,best_e_int,i_i,OM_i,om_i,th,3), th_vec), ...
+      'color', [1 0.5 0], 'LineStyle', '--', 'LineWidth', 1.5, 'DisplayName', '2. Appoggio (Piano i)');
+
+% 3. Orbita di Appoggio (Post Cambio Piano, Pre Bitangente 2)
+plot3(arrayfun(@(th) get_c(best_a_int,best_e_int,i_f,OM_f,best_om_fun,th,1), th_vec), ...
+      arrayfun(@(th) get_c(best_a_int,best_e_int,i_f,OM_f,best_om_fun,th,2), th_vec), ...
+      arrayfun(@(th) get_c(best_a_int,best_e_int,i_f,OM_f,best_om_fun,th,3), th_vec), ...
+      'c', 'LineStyle', '-.', 'LineWidth', 1.5, 'DisplayName', '3. Appoggio (Piano f)');
+
+% 4. Orbita Finale
+plot3(arrayfun(@(th) get_c(a_f,e_f,i_f,OM_f,om_f,th,1), th_vec), ...
+      arrayfun(@(th) get_c(a_f,e_f,i_f,OM_f,om_f,th,2), th_vec), ...
+      arrayfun(@(th) get_c(a_f,e_f,i_f,OM_f,om_f,th,3), th_vec), ...
+      'g', 'LineWidth', 1.5, 'DisplayName', '4. Orbita Target Finale');
+
+% --- MARKERS DELLE MANOVRE ---
+% M1: Inizio Salita (Al pericentro iniziale th=0)
+[r_m1, ~] = par2car(a_i, e_i, i_i, OM_i, om_i, 0, mu); 
+plot3(r_m1(1), r_m1(2), r_m1(3), 'or', 'MarkerSize', 8, 'MarkerFaceColor', 'r', 'MarkerEdgeColor', 'k', 'DisplayName', 'M1: Inizio Salita');
+
+% M2: Cambio Piano (Sull'orbita di appoggio 1, all'angolo theta_plane calcolato)
+[r_m2, ~] = par2car(best_a_int, best_e_int, i_i, OM_i, om_i, best_theta_plane, mu); 
+plot3(r_m2(1), r_m2(2), r_m2(3), '^c', 'MarkerSize', 9, 'MarkerFaceColor', 'c', 'MarkerEdgeColor', 'k', 'DisplayName', 'M2: Cambio Piano');
+
+% M3: Inizio Discesa (Sull'orbita di appoggio 2, all'apocentro th=pi)
+[r_m3, ~] = par2car(best_a_int, best_e_int, i_f, OM_f, best_om_fun, pi, mu); 
+plot3(r_m3(1), r_m3(2), r_m3(3), 'sm', 'MarkerSize', 8, 'MarkerFaceColor', 'm', 'MarkerEdgeColor', 'k', 'DisplayName', 'M3: Inizio Discesa');
+
+% M4: Cambio Pericentro (Sull'orbita target con om_fun, all'angolo thi_fun calcolato)
+[r_m4, ~] = par2car(a_f, e_f, i_f, OM_f, best_om_fun, best_thi_fun, mu); 
+plot3(r_m4(1), r_m4(2), r_m4(3), 'py', 'MarkerSize', 12, 'MarkerFaceColor', 'y', 'MarkerEdgeColor', 'k', 'DisplayName', 'M4: Cambio Pericentro');
+
+% --- TERRA 3D ---
+R_earth = 6371; 
+[xE, yE, zE] = sphere(50); 
+surf(xE * R_earth, yE * R_earth, zE * R_earth, 'FaceColor', 'texturemap', 'EdgeColor', 'none', 'HandleVisibility', 'off');
+try load topo topo topomap1; colormap(topomap1); catch, colormap([0 0.2 0.6]); end
+
+legend('show', 'Location', 'bestoutside'); view(3); hold off;
+
+
