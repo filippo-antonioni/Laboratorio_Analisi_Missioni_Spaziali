@@ -39,7 +39,7 @@ r_a_f = a_f*(1+e_f);                    % raggio apocentro orbita finale
 
 a_aux_min = (r_p_i + r_a_f) / 2;        % la più piccola possibile 
 a_aux_max = 800000;                     % a_aux massima (apocentro arriverà a ~1.6M km)
-N_search  = 5000;
+N_search  = 5000000;
 a_aux_vec = linspace(a_aux_min, a_aux_max, N_search);
 dv_total_vec = zeros(1, N_search);
 
