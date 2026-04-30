@@ -8,9 +8,9 @@ clear; clc; close all;
 mu_sun  = 1.32712440018e11; % Parametro gravitazionale del Sole [km^3/s^2]
 R_sun   = 696340;           % Raggio del Sole [km]
 AU      = 149597870.7;      % 1 Unità Astronomica [km]
-margine = 50000000;           % Margine di sicurezza per evitare il Sole [km] -> Per evitare sublimazione dei materiali
+margine = 50000000;         % Margine di sicurezza per evitare il Sole [km]
 
-% Dati Terra (da Scenario #2 slide 5)
+% Dati Terra
 a_T  = 1.4946e8;     
 e_T  = 0.016;        
 i_T  = 9.1920e-5;    
@@ -27,8 +27,8 @@ om_A = 60.16 * (pi/180);
 
 % --- 2. PARAMETRI DI OTTIMIZZAZIONE ITERATIVA ---
 tolleranza_DV = 0.0001; % Tolleranza per fermare la ricerca [km/s]
-max_iter      = 10;    % Numero massimo di iterazioni (zoom-in) per sicurezza
-N_punti       = 301;    % Punti per griglia (300^3 = ~27.000.000 iterazioni a ciclo)
+max_iter      = 10;     % Numero massimo di iterazioni (zoom-in) per sicurezza
+N_punti       = 301;    % Punti per griglia (numero dispari per convergenza monotona)
 
 % Centri iniziali e ampiezze (partiamo esplorando tutto il cerchio da 0 a 2*pi)
 centro_th1 = pi; ampiezza_th1 = pi; 
@@ -36,7 +36,7 @@ centro_th2 = pi; ampiezza_th2 = pi;
 centro_omT = pi; ampiezza_omT = pi;
 
 diff_DV = inf;       % Inizializza la differenza con un valore enorme
-DV_min_old = 1e6;    % Valore fittizio di partenza per il DV del ciclo precedente
+DV_min_old = 1e6;    % Valore fittizio di partenza
 iter = 1;            % Contatore cicli
 
 fprintf('Inizio Ottimizzazione Iterativa...\n');
@@ -44,6 +44,7 @@ fprintf('Tolleranza impostata: %.4f km/s\n\n', tolleranza_DV);
 
 % --- 3. CICLO WHILE (RESTRINGIMENTO AUTOMATICO) ---
 storia_DV = [];
+
 while diff_DV > tolleranza_DV && iter <= max_iter
     
     fprintf('--- Macro-Iterazione %d ---\n', iter);
@@ -135,14 +136,9 @@ while diff_DV > tolleranza_DV && iter <= max_iter
                     continue;
                 end
                 
-                % CALCOLO DELLE VELOCITÀ
-                % Questo va verificato
-                v1T_PF = sqrt(mu_sun / p_T_calc) * [-sin(th1_T); e_T_calc + cos(th1_T); 0];
-                v2T_PF = sqrt(mu_sun / p_T_calc) * [-sin(th2_T); e_T_calc + cos(th2_T); 0];
-                
-                % Questo va verificato
-                v1T = T_Elio_PF' * v1T_PF;
-                v2T = T_Elio_PF' * v2T_PF;
+                % CALCOLO DELLE VELOCITÀ tramite par2car
+                [~, v1T] = par2car(a_T_calc, e_T_calc, i_trasf, OM_transf, omT, th1_T, mu_sun);
+                [~, v2T] = par2car(a_T_calc, e_T_calc, i_trasf, OM_transf, omT, th2_T, mu_sun);
                 
                 DV_1 = norm(v1T - v1i);
                 DV_2 = norm(v2f - v2T);
@@ -173,8 +169,7 @@ while diff_DV > tolleranza_DV && iter <= max_iter
     centro_th2 = ottimo_th2;
     centro_omT = ottimo_omT;
     
-    % Riduciamo l'ampiezza di ricerca (es. restringiamo del 50% il campo visivo)
-    % N.B.: Puoi modificare questo fattore (es. /3 o /4) per stringere più o meno velocemente
+    % Riduciamo l'ampiezza di ricerca del 50%
     ampiezza_th1 = ampiezza_th1 / 2;
     ampiezza_th2 = ampiezza_th2 / 2;
     ampiezza_omT = ampiezza_omT / 2;
@@ -204,30 +199,24 @@ end
 % =========================================================================
 %  --- 5. PLOTTING DEL PROCESSO E DEL RISULTATO ---
 %  =========================================================================
-
 if ~isinf(DV_min)
     
     % ---------------------------------------------------------
     % FIGURA 1: Convergenza del Processo (Grid-Search Zoom-in)
     % ---------------------------------------------------------
-    % N.B. Assicurati di aver aggiunto "storia_DV = [];" prima del while 
-    % e "storia_DV = [storia_DV, DV_min];" dentro il while. 
-    % Se non l'hai fatto, commenta o ignora questa Figura 1.
-    
     if exist('storia_DV', 'var')
-        figure('Name', 'Processo di Ottimizzazione', 'Color', 'w');
+        figure('Name', 'Processo di Ottimizzazione', 'Color', 'w', 'Position', [100, 100, 700, 500]);
         plot(1:length(storia_DV), storia_DV, '-ok', 'LineWidth', 1.5, 'MarkerFaceColor', 'b');
         grid on;
-        title('Convergenza del \DeltaV Totale Minimo');
+        title('Convergenza del \DeltaV Totale Minimo (Grid Search)');
         xlabel('Macro-Iterazioni (Zoom-in)');
         ylabel('\DeltaV Totale [km/s]');
         xlim([1, length(storia_DV)]);
     end
-
+    
     % ---------------------------------------------------------
     % RICALCOLO PARAMETRI ORBITA DI TRASFERIMENTO OTTIMA
     % ---------------------------------------------------------
-    % Otteniamo i vettori posizione all'istante di partenza e arrivo ottimali
     [r1_opt, ~] = par2car(a_T, e_T, i_T, OM_T, om_T, ottimo_th1, mu_sun);
     [r2_opt, ~] = par2car(a_A, e_A, i_A, OM_A, om_A, ottimo_th2, mu_sun);
     
@@ -247,11 +236,11 @@ if ~isinf(DV_min)
             OM_transf_opt = 2*pi - acos(N_vers_opt(1));
         end
     end
-
+    
     % ---------------------------------------------------------
     % FIGURA 2: Visualizzazione delle Orbite 3D
     % ---------------------------------------------------------
-    figure('Name', 'Orbite nel Sistema Solare', 'Color', 'w', 'Position', [100 100 800 600]);
+    figure('Name', 'Orbite nel Sistema Solare', 'Color', 'w', 'Position', [150 150 800 600]);
     hold on; grid on; axis equal; view(3);
     
     % Il Sole a scala reale (con bordo scuro a contrasto)
@@ -282,20 +271,7 @@ if ~isinf(DV_min)
     plot3(r1_opt(1), r1_opt(2), r1_opt(3), 'ob', 'MarkerFaceColor', 'b', 'MarkerSize', 6, 'DisplayName', 'Partenza (Terra)');
     plot3(r2_opt(1), r2_opt(2), r2_opt(3), 'or', 'MarkerFaceColor', 'r', 'MarkerSize', 6, 'DisplayName', 'Arrivo (Asteroide)');
     
-    % Formattazione grafico
-    title(sprintf('Trasferimento Diretto: Terra -> Asteroide 363505\n\\DeltaV = %.4f km/s', DV_min));
-    xlabel('X [km]'); ylabel('Y [km]'); zlabel('Z [km]');
-    legend('Location', 'best');
-    
-    % Riscala l'unità di misura in AU per una migliore leggibilità (Opzionale)
-    % Se vuoi vedere gli assi in AU invece che in km, de-commenta le 3 righe seguenti:
-    % ax = gca;
-    % ax.XTickLabel = num2str(str2num(ax.XTickLabel) / AU);
-    % xlabel('X [AU]'); ylabel('Y [AU]'); zlabel('Z [AU]');
-end
-
-% --- EVIDENZIAZIONE DEL TRATTO EFFETTIVAMENTE PERCORSO ---
-    % 1. Ricostruiamo le matrici di rotazione usate per il calcolo
+    % --- EVIDENZIAZIONE DEL TRATTO EFFETTIVAMENTE PERCORSO ---
     R_OM_opt = [ cos(OM_transf_opt),  sin(OM_transf_opt), 0;
                 -sin(OM_transf_opt),  cos(OM_transf_opt), 0;
                        0,               0,        1];
@@ -307,20 +283,16 @@ end
                        0,         0,  1];
     T_Elio_PF_opt = R_om_opt * R_i_opt * R_OM_opt; 
     
-    % 2. Proiettiamo i vettori ottimi nel piano perifocale
     r1_PF_opt = T_Elio_PF_opt * r1_opt;
     r2_PF_opt = T_Elio_PF_opt * r2_opt;
     
-    % 3. Calcoliamo le anomalie vere di partenza e arrivo (normalizzate tra 0 e 2*pi)
     th1_T_opt = mod(atan2(r1_PF_opt(2), r1_PF_opt(1)), 2*pi);
     th2_T_opt = mod(atan2(r2_PF_opt(2), r2_PF_opt(1)), 2*pi);
     
-    % 4. Gestione del verso di percorrenza (se attraversa l'asse x del piano)
     if th2_T_opt < th1_T_opt
         th2_T_opt = th2_T_opt + 2*pi;
     end
     
-    % 5. Creazione dei punti e plotting del solo arco interessato
     theta_arco = linspace(th1_T_opt, th2_T_opt, 150);
     r_Arco_plot = zeros(3, length(theta_arco));
     
@@ -328,6 +300,12 @@ end
         [r_Arco_plot(:,idx), ~] = par2car(ottimo_aT, ottimo_eT, i_trasf_opt, OM_transf_opt, ottimo_omT, theta_arco(idx), mu_sun);
     end
     
-    % Plottiamo l'arco sopra la linea tratteggiata (spessore 3, colore verde continuo)
+    % Plottiamo l'arco sopra la linea tratteggiata (spessore 3.5, colore verde continuo)
     plot3(r_Arco_plot(1,:), r_Arco_plot(2,:), r_Arco_plot(3,:), '-g', 'LineWidth', 3.5, 'DisplayName', 'Tratto Percorso (Volo)');
     % ---------------------------------------------------------
+    
+    % Formattazione grafico finale
+    title(sprintf('Trasferimento Diretto: Terra -> Asteroide 363505\n\\DeltaV = %.4f km/s', DV_min));
+    xlabel('X [km]'); ylabel('Y [km]'); zlabel('Z [km]');
+    legend('Location', 'best');
+end
