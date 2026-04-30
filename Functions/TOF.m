@@ -8,7 +8,7 @@ function deltat=TOF(a,e,th1,th2,mu)
 % a           [1x1]  semi-major axis                              [km]
 % e           [1x1]  eccentricity                                 [-]
 % th1         [1x1]  initial true anomaly                         [rad]  
-% th2         [1x1]  final trur anomaly                           [rad]
+% th2         [1x1]  final true anomaly                           [rad]
 % mu          [1x1]  gravitational parameter                      [km^3/s^2]
 % 
 % --------------------------------------------------------------------------
@@ -16,22 +16,27 @@ function deltat=TOF(a,e,th1,th2,mu)
 % deltat      [1x1]  time of flight                               [s]
 % 
 % -------------------------------------------------------------------------
-th_vec = [th1 th2]'; % vettore anomalie vere 
 
-% --- MODIFICA: Uso di atan2 per evitare salti di quadrante ---
+th_vec = [th1 th2]'; 
+
+% 1. Calcolo Anomalia Eccentrica (Il tuo ottimo uso di atan2)
 sin_E = (sqrt(1-e^2) .* sin(th_vec)) ./ (1 + e .* cos(th_vec));
 cos_E = (e + cos(th_vec)) ./ (1 + e .* cos(th_vec));
 E_vec = atan2(sin_E, cos_E);
+% (Non serve più fare il mod() qui!)
 
-% Riportiamo le anomalie eccentriche nel range positivo [0, 2*pi]
-E_vec = mod(E_vec, 2*pi);
-% -------------------------------------------------------------
+% 2. Calcolo delle Anomalie Medie usando l'Eq. di Keplero (M = E - e*sin(E))
+M_vec = E_vec - e .* sin(E_vec);
 
-% Calcolo del tempo di volo tramite Equazione di Keplero
-deltat = sqrt(a^3/mu)*(E_vec(2) - E_vec(1) - e*(sin(E_vec(2)) - sin(E_vec(1))));
+% 3. Variazione di Anomalia Media
+delta_M = M_vec(2) - M_vec(1);
 
-if th1 > th2
-    T = 2*pi*sqrt(a^3/mu);
-    deltat = deltat + T;
-end
+% 4. Il "Trucco": Modulo 2*pi sulla differenza
+% Questo sostituisce il tuo IF e aggiunge il periodo T in automatico 
+% se th2 è "prima" di th1 (gestisce i salti di giro)
+delta_M = mod(delta_M, 2*pi);
+
+% 5. Calcolo del tempo di volo finale
+deltat = delta_M * sqrt(a^3/mu);
+
 end
