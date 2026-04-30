@@ -29,7 +29,7 @@ r_p_f = a_f * (1 - e_f); % Raggio pericentro finale
 
 % Nell'Opzione 1 avevi a_max = 800000. L'apocentro corrispondente è 2*800000 - r_p_i
 r_a_max = 2 * 800000 - r_p_i; 
-r_a_test_vec = linspace(max(r_a_i, r_p_f), r_a_max, 20000);
+r_a_test_vec = linspace(max(r_a_i, r_p_f), r_a_max, 1500000);
 
 DeltaV_minimo = inf;
 fprintf('Scansione di %d orbite di appoggio in corso...\n', length(r_a_test_vec));
