@@ -27,8 +27,9 @@ r_p_i = a_i * (1 - e_i); % Raggio pericentro iniziale
 r_a_i = a_i * (1 + e_i); % Raggio apocentro iniziale
 r_p_f = a_f * (1 - e_f); % Raggio pericentro finale
 
-% Range di esplorazione per il raggio dell'apocentro (fino a 800.000 km)
-r_a_test_vec = linspace(max(r_a_i, r_p_f), 800000, 5000);
+% Nell'Opzione 1 avevi a_max = 800000. L'apocentro corrispondente è 2*800000 - r_p_i
+r_a_max = 2 * 800000 - r_p_i; 
+r_a_test_vec = linspace(max(r_a_i, r_p_f), r_a_max, 20000);
 
 DeltaV_minimo = inf;
 fprintf('Scansione di %d orbite di appoggio in corso...\n', length(r_a_test_vec));
@@ -60,7 +61,7 @@ for idx = 1:length(r_a_test_vec)
     [dV_arg, thi_fun, thf_fun] = changePericenterArg(a_f, e_f, om_fun, om_f, mu);
     
     % COSTO TOTALE
-    costo_totale = costo_bitang1 + dV_plane + costo_bitang2 + dV_arg;
+    costo_totale = costo_bitang1 + abs(dV_plane) + costo_bitang2 + abs(dV_arg); % ho aggiunto gli abs - simone
     
     % Aggiornamento del minimo
     if costo_totale < DeltaV_minimo
