@@ -24,6 +24,7 @@ i_A  = 3.78 * (pi/180);
 OM_A = 187.92 * (pi/180);   
 om_A = 60.16 * (pi/180);    
 
+
 % --- 2. PARAMETRI DI OTTIMIZZAZIONE ITERATIVA ---
 tolleranza_DV = 0.0001; % Tolleranza per fermare la ricerca [km/s]
 max_iter      = 10;    % Numero massimo di iterazioni (zoom-in) per sicurezza

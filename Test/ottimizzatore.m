@@ -7,14 +7,14 @@ clc
 % --- 1. CARICAMENTO DATI ---
 T = load("DatiSC1-2026.txt");
 mu = 398600;
-
+gruppo=9
 % Orbita finale/target
-rr_f = T(27,8:10)';
-vv_f = T(27,11:13)';
+rr_f = T(gruppo,8:10)';
+vv_f = T(gruppo,11:13)';
 [a_f, e_f, i_f, OM_f, om_f, th_f] = car2par(rr_f, vv_f, mu);
 
 % Orbita iniziale
-orbita_iv = T(23,2:7);
+orbita_iv = T(gruppo,2:7);
 a_i  = orbita_iv(1);
 e_i  = orbita_iv(2);
 i_i  = orbita_iv(3);

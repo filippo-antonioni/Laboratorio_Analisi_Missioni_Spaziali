@@ -39,8 +39,9 @@ function [DeltaV, omf, theta] = changeOrbitalPlane(a, e, i_i, OMi, omi, i_f, OMf
         error('Variazioni nulle (dOM=0 o di=0) non gestite in questo algoritmo.');
     end
     
-    % 3. Calcoli comuni a tutti i casi (Triangolo sferico)
+    % 3. Calcoli comuni a tutti i casi (Triangolo sfxerico)
     alpha = acos(cos(i_i)*cos(i_f) + sin(i_i)*sin(i_f)*cos(dOM));
+    
     
     abs_dOM = abs(dOM);
     sin_ui = (sin(abs_dOM) / sin(alpha)) * sin(i_f);
@@ -92,9 +93,10 @@ function [DeltaV, omf, theta] = changeOrbitalPlane(a, e, i_i, OMi, omi, i_f, OMf
     % Mantenere gli angoli nel range [0, 2*pi]
     theta = mod(theta, 2*pi);
     omf   = mod(omf, 2*pi);
-    if cos(theta)>=0
-        theta= theta + pi;
-    end
+    
+      if cos(theta)>=0
+          theta= theta + pi;
+      end
 
     % 5. Calcolo della DeltaV
     % Calcolo del semi-lato retto
