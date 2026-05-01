@@ -44,7 +44,7 @@ switch type
     otherwise
         error('Hai sbagliato a inserire il type...');
 end
-    a=(r1+r2)/2; %calcolo semiasse maggiore
+    a=(r1+r2)/2; %calcolo semiasse maggiore dell'orbita di trasferimento
     DeltaV1=sqrt(mu)*(sqrt(2/r1-1/a)-sqrt(2/r1-1/a_i)); %calcolo il primo delta_V
     
     DeltaV2=sqrt(mu)*(sqrt(2/r2-1/a_f)-sqrt(2/r2-1/a)); %calcolo il secondo delta_V
