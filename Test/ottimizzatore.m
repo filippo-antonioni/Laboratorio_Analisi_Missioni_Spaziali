@@ -7,7 +7,11 @@ clc
 % --- 1. CARICAMENTO DATI ---
 T = load("DatiSC1-2026.txt");
 mu = 398600;
+<<<<<<< HEAD
 gruppo=23;
+=======
+gruppo=22;
+>>>>>>> a904b7dfe85d35ce6339f00a225b85f63ee8cc43
 % Orbita finale/target
 rr_f = T(gruppo,8:10)';
 vv_f = T(gruppo,11:13)';
