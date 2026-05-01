@@ -1,5 +1,6 @@
 %% Opzione 2: Ottimizzazione Trasferimento con Orbita di Appoggio Estesa
 clear
+close all
 clc
 gruppo=23;
 disp('--- AVVIO OPZIONE 2: Ricerca orbita di trasferimento AMPIA (Grid Search) ---');

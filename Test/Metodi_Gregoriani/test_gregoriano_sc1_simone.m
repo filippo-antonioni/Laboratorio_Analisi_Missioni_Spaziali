@@ -15,7 +15,7 @@ close all;
 % -------------------------------------------------------------------------
 T  = load("DatiSC1-2026.txt");
 mu = 398600;  % [km^3/s^2]
-gruppo = 23;
+gruppo = 27;
 
 % --- Orbita target / finale ---
 rr_f   = T(gruppo, 8:10)';
