@@ -33,6 +33,7 @@ r_a_i = a_i * (1 + e_i);
 r_p_f = a_f * (1 - e_f); 
 r_a_max = 350000; 
 N_search  = 100;
+
 r_a_test_vec = linspace(max(r_a_i, r_p_f), r_a_max, N_search); 
 min_costo = inf;
 fprintf('Esplorazione griglia (Apocentri e Pericentri) in corso...\n');
@@ -52,7 +53,7 @@ for idx_a = 1:length(r_a_test_vec)
         end
         
         % -------------------------------------------------------------
-        % FASI DI MANOVRA E COASTING
+        % FASI COMUNI 
         % -------------------------------------------------------------
         dt_coast1 = TOF(a_i, e_i, th_i, 0, mu);
         
@@ -65,43 +66,60 @@ for idx_a = 1:length(r_a_test_vec)
         th_plane_tmp = theta_plane;
         dt_coast_park = TOF(a_park, e_park, pi, th_plane_tmp, mu);
         
-        % Cambio anomalia pericentro sull'orbita di appoggio
-        [dV_arg, thi_fun, thf_fun] = changePericenterArg(a_park, e_park, om_plane, om_f, mu);
-        [thi_arg_max, idx_thi_arg_max] = max(thi_fun);
-        [thi_arg_min, idx_thi_arg_min] = min(thi_fun);
+        % Uso la funzione per avere l'interruttore VERO/FALSO (ignoro i th_int)
+        [interseca, ~, ~] = orbit_intersection(a_park, e_park, om_plane, a_f, e_f, om_f);
         
-        % Calcolo tempo coasting da punto cambio piano al punto cambio pericentro
-        if theta_plane > thi_arg_min && theta_plane < thi_arg_max
-            dt_coast_periarg = TOF(a_park, e_park, theta_plane, thi_arg_max, mu);
-            arg = 1;
-            thi_arg = thi_arg_max;
-        else 
-            dt_coast_periarg = TOF(a_park, e_park, theta_plane, thi_arg_min, mu); 
-            arg = 0;
-            thi_arg = thi_arg_min;
-        end
-        
-        % Calcolo coasting dal punto post-cambio anomalia fino all'apocentro
-        if arg
-            dt_coast_park2 = TOF(a_park, e_park, thf_fun(idx_thi_arg_max), pi, mu); 
-        else 
-            dt_coast_park2 = TOF(a_park, e_park, thf_fun(idx_thi_arg_min), pi, mu); 
-        end
-       
-        % Bitangente discesa
-        [dV2_1, dV2_2, dt2A] = bitangentTransfer(a_park, e_park, a_f, e_f, 'ap', mu);
-        costo_discesa = abs(dV2_1) + abs(dV2_2);     
+        if interseca 
+            seq_type = 'B';
             
-        % Coasting finale dal pericentro dopo bitangente fino al punto finale target
-        dt_coast_finale = TOF(a_f, e_f, 0, th_f, mu);
-          
-        tempo_tot = dt_coast1 + dt1 + dt_coast_park + dt_coast_periarg + dt_coast_park2 + dt2A + dt_coast_finale;
-        dV_tot = costo_salita + costo_piano + costo_discesa + abs(dV_arg);
+            % Cambio anomalia pericentro (su Parcheggio)
+            [dV_arg, thi_fun, thf_fun] = changePericenterArg(a_park, e_park, om_plane, om_f, mu);
+            
+            % Scelgo il punto di self-intersezione (thi_fun) che incontro per primo 
+            dt_c1 = TOF(a_park, e_park, theta_plane, thi_fun(1), mu);
+            dt_c2 = TOF(a_park, e_park, theta_plane, thi_fun(2), mu);
+            
+            if dt_c1 < dt_c2
+                dt_coast_periarg = dt_c1;
+                thi_arg = thi_fun(1);
+                thf_arg = thf_fun(1);
+            else
+                dt_coast_periarg = dt_c2;
+                thi_arg = thi_fun(2);
+                thf_arg = thf_fun(2);
+            end
+            
+            % Dall'uscita del cambio pericentro, vado all'apocentro per la bitangente
+            dt_coast_park2 = TOF(a_park, e_park, thf_arg, pi, mu);
+            
+            % Bitangente discesa
+            [dV2_1, dV2_2, dt2A] = bitangentTransfer(a_park, e_park, a_f, e_f, 'ap', mu);
+            dt_coast_finale = TOF(a_f, e_f, 0, th_f, mu);
+            
+        else 
+            seq_type = 'A';
+            
+            % Vado dritto all'apocentro
+            dt_coast_park2 = TOF(a_park, e_park, theta_plane, pi, mu); 
+        
+            % Bitangente discesa
+            [dV2_1, dV2_2, dt2A] = bitangentTransfer(a_park, e_park, a_f, e_f, 'ap', mu);
+            
+            % Cambio anomalia pericentro (su Finale)
+            [dV_arg, thi_fun, thf_fun] = changePericenterArg(a_f, e_f, om_plane, om_f, mu);
+            [thi_arg, idx_thi_arg] = max(thi_fun); % Tuo criterio originale
+            
+            dt_coast_periarg = TOF(a_f, e_f, 0, thi_arg, mu);
+            dt_coast_finale = TOF(a_f, e_f, thf_fun(idx_thi_arg), th_f, mu);
+        end
+        
+        tempo_tot = dt_coast1 + dt1 + dt_coast_park + dt_coast_park2 + dt2A + dt_coast_periarg + dt_coast_finale;
+        dV_tot = costo_salita + costo_piano + abs(dV2_1) + abs(dV2_2) + abs(dV_arg);
         
         if dV_tot < min_costo
             min_costo = dV_tot;
             opt = struct('a_park', a_park, 'e_park', e_park, 'costo', dV_tot, 'tof', tempo_tot, ...
-                         'om_plane', om_plane, 'th_plane', th_plane_tmp, 'th_peri', thi_arg, ...
+                         'om_plane', om_plane, 'th_plane', th_plane_tmp, 'th_peri', thi_arg, 'seq', seq_type, ...
                          'dV1_A', dV1_A, 'dV1_B', dV1_B, 'dV_plane', dV_plane, 'dV_arg', dV_arg, ...
                          'dV2_1', dV2_1, 'dV2_2', dV2_2, ...
                          'dt_coast1', dt_coast1, 'dt1', dt1, 'dt_coast_park', dt_coast_park, ...
@@ -113,6 +131,8 @@ end
 
 % --- 3. STAMPA RISULTATI DINAMICA ---
 fprintf('\n=======================================================\n');
+fprintf('Risultati: Vinta la SEQUENZA %s\n', opt.seq);
+fprintf('=======================================================\n');
 fprintf('TOTALE ASSOLUTO: %.4f km/s | TOF: %.2f giorni\n', min_costo, opt.tof/86400);
 
 fprintf('\n--- DETTAGLIO MANOVRE (In Ordine Cronologico) ---\n');
@@ -121,17 +141,31 @@ fprintf('Raggio Pericentro Appoggio: %.2f km\n', opt.a_park*(1-opt.e_park));
 fprintf('Impulso 1 (Inizio Salita):  %.4f km/s\n', abs(opt.dV1_A));
 fprintf('Impulso 2 (Fine Salita):    %.4f km/s\n', abs(opt.dV1_B));
 fprintf('Impulso 3 (Cambio Piano):   %.4f km/s\n', abs(opt.dV_plane));
-fprintf('Impulso 4 (Cambio Peri):    %.4f km/s\n', abs(opt.dV_arg));
-fprintf('Impulso 5 (Inizio Discesa): %.4f km/s\n', abs(opt.dV2_1));
-fprintf('Impulso 6 (Fine Discesa):   %.4f km/s\n', abs(opt.dV2_2));
+
+if opt.seq == 'B'
+    fprintf('Impulso 4 (Cambio Peri):    %.4f km/s\n', abs(opt.dV_arg));
+    fprintf('Impulso 5 (Inizio Discesa): %.4f km/s\n', abs(opt.dV2_1));
+    fprintf('Impulso 6 (Fine Discesa):   %.4f km/s\n', abs(opt.dV2_2));
+else
+    fprintf('Impulso 4 (Inizio Discesa): %.4f km/s\n', abs(opt.dV2_1));
+    fprintf('Impulso 5 (Fine Discesa):   %.4f km/s\n', abs(opt.dV2_2));
+    fprintf('Impulso 6 (Cambio Peri):    %.4f km/s\n', abs(opt.dV_arg));
+end
 
 fprintf('\n--- TEMPI DI VOLO (In Ordine Cronologico) ---\n');
 fprintf('Coasting a Pericentro Iniziale:   %.2f giorni\n', opt.dt_coast1 / 86400);
 fprintf('Trasferimento 1 (Salita):         %.2f giorni\n', opt.dt1 / 86400);
 fprintf('Coasting a Cambio Piano:          %.2f giorni\n', opt.dt_coast_park / 86400);
-fprintf('Coasting a Cambio Pericentro:     %.2f giorni\n', opt.dt_coast_periarg / 86400);
-fprintf('Coasting a Discesa (Apocentro):   %.2f giorni\n', opt.dt_coast_park2 / 86400);
-fprintf('Trasferimento 2 (Discesa):        %.2f giorni\n', opt.dt2A / 86400);
+
+if opt.seq == 'B'
+    fprintf('Coasting a Cambio Pericentro:     %.2f giorni\n', opt.dt_coast_periarg / 86400);
+    fprintf('Coasting a Discesa (Apocentro):   %.2f giorni\n', opt.dt_coast_park2 / 86400);
+    fprintf('Trasferimento 2 (Discesa):        %.2f giorni\n', opt.dt2A / 86400);
+else
+    fprintf('Coasting a Discesa (Apocentro):   %.2f giorni\n', opt.dt_coast_park2 / 86400);
+    fprintf('Trasferimento 2 (Discesa):        %.2f giorni\n', opt.dt2A / 86400);
+    fprintf('Coasting a Cambio Pericentro:     %.2f giorni\n', opt.dt_coast_periarg / 86400);
+end
 fprintf('Coasting a Posizione Finale:      %.2f giorni\n', opt.dt_coast_finale / 86400);
 fprintf('TEMPO TOTALE DI MISSIONE:         %.2f giorni\n', opt.tof / 86400);
 
@@ -141,7 +175,7 @@ fprintf('TEMPO TOTALE DI MISSIONE:         %.2f giorni\n', opt.tof / 86400);
 fig = figure('Name', 'Analisi Missione: Trasferimento Ottimizzato', 'NumberTitle', 'off');
 hold on; grid on; axis equal; view(3); rotate3d on;
 xlabel('X [km]', 'FontWeight', 'bold'); ylabel('Y [km]', 'FontWeight', 'bold'); zlabel('Z [km]', 'FontWeight', 'bold');
-title('Traiettoria 3D Ottimizzata', 'FontSize', 14, 'FontWeight', 'bold');
+title(['Traiettoria 3D Ottimizzata (Sequenza ', opt.seq, ')'], 'FontSize', 14, 'FontWeight', 'bold');
 
 th_vec_full = linspace(0, 2*pi, 300);
 th_vec_t1   = linspace(0, pi, 150);
@@ -159,32 +193,60 @@ plot3(arrayfun(@(th) get_c(a_i,e_i,i_i,OM_i,om_i,th,1), th_vec_full), arrayfun(@
 [r_start_salita,~] = par2car(a_i, e_i, i_i, OM_i, om_i, 0, mu);
 plot3(r_start_salita(1), r_start_salita(2), r_start_salita(3), 'ok', 'MarkerSize', 7, 'MarkerFaceColor', [0 0.4470 0.7410], 'DisplayName', '1. Inizio Salita');
 
-% 2. Salita
+% Salita
 plot3(arrayfun(@(th) get_c(a_t1,e_t1,i_i,OM_i,om_i,th,1), th_vec_t1), arrayfun(@(th) get_c(a_t1,e_t1,i_i,OM_i,om_i,th,2), th_vec_t1), arrayfun(@(th) get_c(a_t1,e_t1,i_i,OM_i,om_i,th,3), th_vec_t1), 'Color', [0.8500 0.3250 0.0980], 'LineStyle', '--', 'LineWidth', 2, 'DisplayName', 'Trsf 1: Salita');
 [r_end_salita,~] = par2car(opt.a_park, opt.e_park, i_i, OM_i, om_i, pi, mu);
 plot3(r_end_salita(1), r_end_salita(2), r_end_salita(3), 'sk', 'MarkerSize', 7, 'MarkerFaceColor', [0.8500 0.3250 0.0980], 'DisplayName', '2. Arrivo su Appoggio');
 
-% 3. Orbita Appoggio Pre-Piano
+% Orbita Appoggio Pre-Piano
 plot3(arrayfun(@(th) get_c(opt.a_park,opt.e_park,i_i,OM_i,om_i,th,1), th_vec_full), arrayfun(@(th) get_c(opt.a_park,opt.e_park,i_i,OM_i,om_i,th,2), th_vec_full), arrayfun(@(th) get_c(opt.a_park,opt.e_park,i_i,OM_i,om_i,th,3), th_vec_full), 'Color', [0.9290 0.6940 0.1250], 'LineStyle', '-', 'LineWidth', 1.5, 'DisplayName', 'Appoggio (Pre-Plane)');
+
+% 3. Cambio Piano
 [r_plane,~] = par2car(opt.a_park, opt.e_park, i_i, OM_i, om_i, opt.th_plane, mu);
 plot3(r_plane(1), r_plane(2), r_plane(3), '^k', 'MarkerSize', 8, 'MarkerFaceColor', [0.9290 0.6940 0.1250], 'DisplayName', '3. Cambio Piano');
 
-% 4. Orbita Appoggio Post-Piano
+% Orbita Appoggio Post-Piano
 plot3(arrayfun(@(th) get_c(opt.a_park,opt.e_park,i_f,OM_f,opt.om_plane,th,1), th_vec_full), arrayfun(@(th) get_c(opt.a_park,opt.e_park,i_f,OM_f,opt.om_plane,th,2), th_vec_full), arrayfun(@(th) get_c(opt.a_park,opt.e_park,i_f,OM_f,opt.om_plane,th,3), th_vec_full), 'Color', [0.4940 0.1840 0.5560], 'LineStyle', '-', 'LineWidth', 1.5, 'DisplayName', 'Appoggio (Post-Plane)');
-[r_cambio_peri,~] = par2car(opt.a_park, opt.e_park, i_f, OM_f, opt.om_plane, opt.th_peri, mu);
-plot3(r_cambio_peri(1), r_cambio_peri(2), r_cambio_peri(3), 'pk', 'MarkerSize', 10, 'MarkerFaceColor', [0.4940 0.1840 0.5560], 'DisplayName', '4. Cambio Pericentro');
 
-% 5. Orbita Appoggio Post-Peri
-plot3(arrayfun(@(th) get_c(opt.a_park,opt.e_park,i_f,OM_f,om_f,th,1), th_vec_full), arrayfun(@(th) get_c(opt.a_park,opt.e_park,i_f,OM_f,om_f,th,2), th_vec_full), arrayfun(@(th) get_c(opt.a_park,opt.e_park,i_f,OM_f,om_f,th,3), th_vec_full), 'Color', [0.3010 0.7450 0.9330], 'LineStyle', '-', 'LineWidth', 1.5, 'DisplayName', 'Appoggio (Post-Peri)');
-[r_start_discesa,~] = par2car(opt.a_park, opt.e_park, i_f, OM_f, om_f, pi, mu);
-plot3(r_start_discesa(1), r_start_discesa(2), r_start_discesa(3), 'dk', 'MarkerSize', 7, 'MarkerFaceColor', [0.3010 0.7450 0.9330], 'DisplayName', '5. Inizio Discesa');
+if opt.seq == 'B'
+    % 4. Cambio Pericentro
+    [r_cambio_peri,~] = par2car(opt.a_park, opt.e_park, i_f, OM_f, opt.om_plane, opt.th_peri, mu);
+    plot3(r_cambio_peri(1), r_cambio_peri(2), r_cambio_peri(3), 'pk', 'MarkerSize', 10, 'MarkerFaceColor', [0.4940 0.1840 0.5560], 'DisplayName', '4. Cambio Pericentro');
+    
+    % Orbita Appoggio Post-Peri
+    plot3(arrayfun(@(th) get_c(opt.a_park,opt.e_park,i_f,OM_f,om_f,th,1), th_vec_full), arrayfun(@(th) get_c(opt.a_park,opt.e_park,i_f,OM_f,om_f,th,2), th_vec_full), arrayfun(@(th) get_c(opt.a_park,opt.e_park,i_f,OM_f,om_f,th,3), th_vec_full), 'Color', [0.3010 0.7450 0.9330], 'LineStyle', '-', 'LineWidth', 1.5, 'DisplayName', 'Appoggio (Post-Peri)');
+    
+    % 5. Inizio Discesa
+    [r_start_discesa,~] = par2car(opt.a_park, opt.e_park, i_f, OM_f, om_f, pi, mu);
+    plot3(r_start_discesa(1), r_start_discesa(2), r_start_discesa(3), 'dk', 'MarkerSize', 7, 'MarkerFaceColor', [0.3010 0.7450 0.9330], 'DisplayName', '5. Inizio Discesa');
+    
+    % Discesa
+    plot3(arrayfun(@(th) get_c(a_t2,e_t2,i_f,OM_f,om_f,th,1), th_vec_t2), arrayfun(@(th) get_c(a_t2,e_t2,i_f,OM_f,om_f,th,2), th_vec_t2), arrayfun(@(th) get_c(a_t2,e_t2,i_f,OM_f,om_f,th,3), th_vec_t2), 'Color', [0.6350 0.0780 0.1840], 'LineStyle', '--', 'LineWidth', 2, 'DisplayName', 'Trsf 2: Discesa');
+    
+    % 6. Fine Discesa
+    [r_end_discesa,~] = par2car(a_f, e_f, i_f, OM_f, om_f, 0, mu);
+    plot3(r_end_discesa(1), r_end_discesa(2), r_end_discesa(3), 'hk', 'MarkerSize', 8, 'MarkerFaceColor', [0.6350 0.0780 0.1840], 'DisplayName', '6. Fine Discesa');
+else
+    % 4. Inizio Discesa
+    [r_start_discesa,~] = par2car(opt.a_park, opt.e_park, i_f, OM_f, opt.om_plane, pi, mu);
+    plot3(r_start_discesa(1), r_start_discesa(2), r_start_discesa(3), 'dk', 'MarkerSize', 7, 'MarkerFaceColor', [0.4940 0.1840 0.5560], 'DisplayName', '4. Inizio Discesa');
+    
+    % Discesa
+    plot3(arrayfun(@(th) get_c(a_t2,e_t2,i_f,OM_f,opt.om_plane,th,1), th_vec_t2), arrayfun(@(th) get_c(a_t2,e_t2,i_f,OM_f,opt.om_plane,th,2), th_vec_t2), arrayfun(@(th) get_c(a_t2,e_t2,i_f,OM_f,opt.om_plane,th,3), th_vec_t2), 'Color', [0.6350 0.0780 0.1840], 'LineStyle', '--', 'LineWidth', 2, 'DisplayName', 'Trsf 2: Discesa');
+    
+    % 5. Fine Discesa
+    [r_end_discesa,~] = par2car(a_f, e_f, i_f, OM_f, opt.om_plane, 0, mu); 
+    plot3(r_end_discesa(1), r_end_discesa(2), r_end_discesa(3), 'hk', 'MarkerSize', 8, 'MarkerFaceColor', [0.6350 0.0780 0.1840], 'DisplayName', '5. Fine Discesa (Pre-Rotazione)');
+    
+    % Orbita Finale Storta
+    plot3(arrayfun(@(th) get_c(a_f,e_f,i_f,OM_f,opt.om_plane,th,1), th_vec_full), arrayfun(@(th) get_c(a_f,e_f,i_f,OM_f,opt.om_plane,th,2), th_vec_full), arrayfun(@(th) get_c(a_f,e_f,i_f,OM_f,opt.om_plane,th,3), th_vec_full), 'Color', [0.3010 0.7450 0.9330], 'LineStyle', '-', 'LineWidth', 1.5, 'DisplayName', 'Finale (Pre-Rotazione)');
+    
+    % 6. Cambio Pericentro
+    [r_cambio_peri,~] = par2car(a_f, e_f, i_f, OM_f, opt.om_plane, opt.th_peri, mu); 
+    plot3(r_cambio_peri(1), r_cambio_peri(2), r_cambio_peri(3), 'pk', 'MarkerSize', 10, 'MarkerFaceColor', [0.3010 0.7450 0.9330], 'DisplayName', '6. Cambio Pericentro');
+end
 
-% 6. Discesa
-plot3(arrayfun(@(th) get_c(a_t2,e_t2,i_f,OM_f,om_f,th,1), th_vec_t2), arrayfun(@(th) get_c(a_t2,e_t2,i_f,OM_f,om_f,th,2), th_vec_t2), arrayfun(@(th) get_c(a_t2,e_t2,i_f,OM_f,om_f,th,3), th_vec_t2), 'Color', [0.6350 0.0780 0.1840], 'LineStyle', '--', 'LineWidth', 2, 'DisplayName', 'Trsf 2: Discesa');
-[r_end_discesa,~] = par2car(a_f, e_f, i_f, OM_f, om_f, 0, mu);
-plot3(r_end_discesa(1), r_end_discesa(2), r_end_discesa(3), 'hk', 'MarkerSize', 8, 'MarkerFaceColor', [0.6350 0.0780 0.1840], 'DisplayName', '6. Fine Discesa');
-
-% 7. Orbita Target
+% Orbita Target
 plot3(arrayfun(@(th) get_c(a_f,e_f,i_f,OM_f,om_f,th,1), th_vec_full), arrayfun(@(th) get_c(a_f,e_f,i_f,OM_f,om_f,th,2), th_vec_full), arrayfun(@(th) get_c(a_f,e_f,i_f,OM_f,om_f,th,3), th_vec_full), 'Color', [0.4660 0.6740 0.1880], 'LineWidth', 2.5, 'DisplayName', 'Orbita Finale Target');
 
 % --- TERRA FOTOREALISTICA ---
