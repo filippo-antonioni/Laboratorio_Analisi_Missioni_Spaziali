@@ -56,6 +56,8 @@ for idx_a = 1:length(r_a_test_vec)
         % -------------------------------------------------------------
         dt_coast1 = TOF(a_i, e_i, th_i, 0, mu);
         
+        
+
         [dV1_A, dV1_B, dt1] = bitangentTransfer(a_i, e_i, a_park, e_park, 'pa', mu);
         costo_salita = abs(dV1_A) + abs(dV1_B);
         
