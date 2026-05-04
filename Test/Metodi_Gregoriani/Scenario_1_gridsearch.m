@@ -31,7 +31,8 @@ th_i = orbita_iv(6);
 r_p_i = a_i * (1 - e_i); 
 r_a_i = a_i * (1 + e_i); 
 r_p_f = a_f * (1 - e_f); 
-r_a_max = 350000; 
+r_a_max = 320000;  % NON METTERE VALORI CHE TI FACCIANO ENTRARE NELLA SFERA DI INFLUENZA DELLA LUNA
+% o 300k o 320k più o meno non di più
 N_search  = 100;
 r_a_test_vec = linspace(max(r_a_i, r_p_f), r_a_max, N_search); 
 min_costo = inf;
@@ -40,7 +41,7 @@ fprintf('Esplorazione griglia (Apocentri e Pericentri) in corso...\n');
 for idx_a = 1:length(r_a_test_vec)
     r_a_park = r_a_test_vec(idx_a);
     r_p_min = R_earth + 100;
-    r_p_test_vec = linspace(r_p_min, r_a_park - 1000, N_search);
+    r_p_test_vec = linspace(r_p_min, r_a_park-1000, N_search);
     
     for idx_p = 1:length(r_p_test_vec)
         r_p_park = r_p_test_vec(idx_p);
