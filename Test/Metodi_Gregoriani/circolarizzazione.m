@@ -37,7 +37,7 @@ r_p_f = a_f*(1-e_f);                    % raggio pericentro orbita finale
 % L'orbita ausiliaria deve essere più grande dei pericentri per avere senso
 % nei trasferimenti bitangenti 'pa' e 'ap'.
 a_aux_min = max(r_p_i, r_p_f) + 500;    % a_aux_min = (r_p_i + r_a_f)/2 nel codice buttato;
-a_aux_max = 350000;                     
+a_aux_max = 320000;                     
 N_search  = 5000;
 a_aux_vec = linspace(a_aux_min, a_aux_max, N_search);
 dv_total_vec = zeros(1, N_search);
@@ -111,7 +111,8 @@ fprintf('  Deltat TOTALE  = %.6f gg\n', dt/86400);
 % -------------------------------------------------------------------------
 % 3. PLOT 3D COMPLETO
 % -------------------------------------------------------------------------
-figure('Name','Trasferimento Orbitale - Soluzione Circolare','Color','k','Position',[100 100 1200 900]);
+figure('Name','Trasferimento Orbitale - Soluzione Circolare');
+
 ax = axes;
 set(ax, 'Color','k', 'XColor','w', 'YColor','w', 'ZColor','w');
 hold on; grid on; axis equal; view(35, 25);
