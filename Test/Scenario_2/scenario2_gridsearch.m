@@ -15,7 +15,7 @@ a_T  = 1.4946e8;
 e_T  = 0.016;        
 i_T  = 9.1920e-5;    
 OM_T = 2.7847;       
-om_T = 5.2643;       
+om_T = 5.2643;
 
 % Dati Asteroide 23: 363505 (2003 UC20) 
 a_A  = 0.781241 * AU;       
@@ -205,7 +205,7 @@ if ~isinf(DV_min)
     % FIGURA 1: Convergenza del Processo (Grid-Search Zoom-in)
     % ---------------------------------------------------------
     if exist('storia_DV', 'var')
-        figure('Name', 'Processo di Ottimizzazione', 'Color', 'w', 'Position', [100, 100, 700, 500]);
+        figure('Name', 'Processo di Ottimizzazione');
         plot(1:length(storia_DV), storia_DV, '-ok', 'LineWidth', 1.5, 'MarkerFaceColor', 'b');
         grid on;
         title('Convergenza del \DeltaV Totale Minimo (Grid Search)');
@@ -240,11 +240,11 @@ if ~isinf(DV_min)
     % ---------------------------------------------------------
     % FIGURA 2: Visualizzazione delle Orbite 3D
     % ---------------------------------------------------------
-    figure('Name', 'Orbite nel Sistema Solare', 'Color', 'w', 'Position', [150 150 800 600]);
-    hold on; grid on; axis equal; view(3);
+    figure('Name', 'Orbite nel Sistema Solare');
+    hold on; grid on; axis equal; view(3);F
     
     % Il Sole a scala reale (con bordo scuro a contrasto)
-    plot3(0, 0, 0, 'oy', 'MarkerSize', 8, 'MarkerFaceColor', '#FFCC00', 'MarkerEdgeColor', 'k', 'LineWidth', 1.5, 'DisplayName', 'Sole');
+    plot3(0, 0, 0, 'oy', 'MarkerSize', 8, 'MarkerFaceColor', '#FFCC00', 'MarkerEdgeColor', 'y', 'LineWidth', 1.5, 'DisplayName', 'Sole');
     
     % Generazione punti per tracciare le ellissi complete
     theta_plot = linspace(0, 2*pi, 300);
