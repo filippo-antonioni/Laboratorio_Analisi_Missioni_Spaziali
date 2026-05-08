@@ -43,6 +43,10 @@ a_aux_vec = linspace(a_aux_min, a_aux_max, N_search);
 dv_total_vec = zeros(1, N_search);
 dt_total_vec = zeros(1, N_search);
 
+% --- contributi separati al DeltaV ---
+dv_plane_vec    = zeros(1, N_search);
+dv_transfer_vec = zeros(1, N_search);
+
 disp('Scansione di a_aux (circolare) in corso...');
 
 % Vogliamo orbita finale circolare
@@ -91,9 +95,19 @@ end
     % Manovra 4: bitangente 'ap' (da apocentro/orbita circolare a pericentro finale)
     [dv4_1, dv4_2, dt_bitang_2] = bitangentTransfer(a_aux_k, e_aux_k, a_f, e_f, 'ap', mu);
     
-    % COSTO E TEMPO TOTALE
-    dv_total_vec(k) = abs(dv1_1) + abs(dv1_2) + abs(dv2) + abs(dv3) + abs(dv4_1) + abs(dv4_2);
-    dt_total_vec(k) = dt_coast_1 + dt_bitang_1 + dt_coast_2 + dt_coast_3 + dt_bitang_2;
+% --- contributi separati ---
+dv_transfer = abs(dv1_1) + abs(dv1_2) + abs(dv4_1) + abs(dv4_2);
+
+dv_plane = abs(dv2);
+
+% salvataggio vettori
+dv_transfer_vec(k) = dv_transfer;
+dv_plane_vec(k)    = dv_plane;
+
+% COSTO E TEMPO TOTALE
+dv_total_vec(k) = dv_transfer + dv_plane + abs(dv3);
+
+dt_total_vec(k) = dt_coast_1 + dt_bitang_1 + dt_coast_2 + dt_coast_3 + dt_bitang_2;
 end
 
 % Trova il minimo
@@ -107,6 +121,34 @@ fprintf('  a_aux ottimale = %.4f km\n', a_aux);
 fprintf('  e_aux          = %.6f (Circolare)\n', e_aux);
 fprintf('  DeltaV TOTALE  = %.6f km/s\n', dv_min);
 fprintf('  Deltat TOTALE  = %.6f gg\n', dt/86400);
+
+% -------------------------------------------------------------------------
+% PLOT ANDAMENTO DELTA-V
+% -------------------------------------------------------------------------
+figure('Name','Analisi DeltaV');
+
+plot(a_aux_vec, dv_total_vec, 'LineWidth',2);
+hold on;
+
+plot(a_aux_vec, dv_transfer_vec, '--', 'LineWidth',1.8);
+
+plot(a_aux_vec, dv_plane_vec, ':', 'LineWidth',2);
+
+xline(a_aux,'r--','LineWidth',1.5);
+
+grid on;
+xlim([a_aux_min a_aux_max]);
+
+xlabel('a_{aux} [km]');
+ylabel('\DeltaV [km/s]');
+
+title('Andamento del DeltaV');
+
+legend('\DeltaV totale', ...
+       '\DeltaV trasferimenti', ...
+       '\DeltaV cambio piano', ...
+       'a_{aux} ottimo', ...
+       'Location','best');
 
 % -------------------------------------------------------------------------
 % 3. PLOT 3D COMPLETO
@@ -212,4 +254,127 @@ function r_ijk = getPos3D(a, e, i, OM, om, th)
     % Rotazione da perifocale a inerziale geocentrico (ECI)
     T_pqw2ijk = R3_OM * R1_i * R3_om;
     r_ijk = T_pqw2ijk * r_pqw;
+end
+
+%% =========================================================================
+% 4. ANIMAZIONE 3D AVANZATA - TRACCIA MULTI-COLORE E ORBITE DI RIFERIMENTO
+% =========================================================================
+% Ricalcolo parametri ellissi di trasferimento (già calcolati per il plot 3D,
+% li ridefiniamo per sicurezza e leggibilità della section)
+r_p_i  = a_i*(1-e_i);
+r_p_f  = a_f*(1-e_f);
+a_t1   = (r_p_i + a_aux)/2;
+e_t1   = (a_aux - r_p_i)/(a_aux + r_p_i);
+a_t2   = (a_aux + r_p_f)/2;
+e_t2   = (a_aux - r_p_f)/(a_aux + r_p_f);
+
+% --- 1. SETUP SCENA ---
+fig_anim = figure('Name', 'Simulazione Dinamica Trasferimento Orbitale Circolare', 'Color', 'w', 'Units','normalized','Position',[0.1 0.1 0.8 0.8]);
+hold on; grid on; axis equal; view(35, 25);
+xlabel('X [km]'); ylabel('Y [km]'); zlabel('Z [km]');
+title('Animazione Sequenza Manovre (Orbita Ausiliaria Circolare)', 'FontSize', 14);
+
+% Terra 3D
+[xE, yE, zE] = sphere(50);
+try
+    load topo topo topomap1;
+    surf(xE * 6371, yE * 6371, zE * 6371, 'FaceColor', 'texturemap', 'CData', topo, 'EdgeColor', 'none', 'HandleVisibility', 'off');
+    colormap(topomap1);
+catch
+    surf(xE * 6371, yE * 6371, zE * 6371, 'FaceColor', [0.1 0.4 0.8], 'EdgeColor', 'none');
+end
+
+% --- 2. PLOT ORBITE DI RIFERIMENTO (Tratteggiate) ---
+plotOrbitStaticAnim(a_i, e_i, i_i, OM_i, om_i, mu, [0.2 0.6 1], '--', 1, 'Rif. Iniziale');
+plotOrbitStaticAnim(a_aux, e_aux, i_i, OM_i, om_i, mu, [1 1 0], '--', 1, 'Rif. Aux Pre-Piano');
+plotOrbitStaticAnim(a_aux, e_aux, i_f, OM_f, om_f, mu, [0.8 0.2 0.8], '--', 1, 'Rif. Aux Post-Piano/Peri');
+plotOrbitStaticAnim(a_f, e_f, i_f, OM_f, om_f, mu, [0 1 0], '--', 1, 'Rif. Finale Target');
+
+% --- 3. DEFINIZIONE SEGMENTI E COLORI TRACCIA ---
+% Ogni riga: {a, e, i, OM, om, th_start, th_end, nome, colore_traccia}
+segmenti = {};
+
+% Seg 1: Coasting su Orbita Iniziale (da th_i a pericentro th=0)
+th_s = th_i; th_e = 0; if th_e <= th_s; th_e = th_e + 2*pi; end
+segmenti{1} = {a_i, e_i, i_i, OM_i, om_i, th_s, th_e, 'Coasting Iniziale', [0.2 0.6 1]};
+
+% Seg 2: Trasferimento in Salita (da pericentro iniziale th=0 ad apocentro th=pi)
+segmenti{2} = {a_t1, e_t1, i_i, OM_i, om_i, 0, pi, 'Trasferimento Salita', [1 0.6 0.1]};
+
+% Seg 3: Coasting su Aux Pre-Piano (da th=pi al nodo di cambio piano th_plane_tmp)
+th_s = pi; th_e = th_plane_tmp; if th_e <= th_s; th_e = th_e + 2*pi; end
+segmenti{3} = {a_aux, e_aux, i_i, OM_i, om_i, th_s, th_e, 'Verso Nodo Cambio Piano', [1 1 0]};
+
+% --- FIX TELETRASPORTO (Usando la tua logica!) ---
+% Il satellite si trova a th_plane_tmp. Ruotando il pericentro da om_tmp a om_f,
+% la sua nuova anomalia vera è semplicemente scalata della differenza tra i due.
+th_post_plane_new = mod(th_plane_tmp + om_tmp - om_f, 2*pi);
+
+% Seg 4: Coasting su Aux Post-Piano/Peri (dal nodo al punto di discesa th=pi)
+th_s = th_post_plane_new; 
+th_e = pi; % Arrivo per la bitangente di discesa
+if th_e <= th_s; th_e = th_e + 2*pi; end
+segmenti{4} = {a_aux, e_aux, i_f, OM_f, om_f, th_s, th_e, 'Allineamento Discesa', [0.8 0.2 0.8]};
+
+% Seg 5: Trasferimento in Discesa (da apocentro th=pi a pericentro th=2*pi)
+segmenti{5} = {a_t2, e_t2, i_f, OM_f, om_f, pi, 2*pi, 'Trasferimento Discesa', [1 0.3 0.3]};
+
+% Seg 6: Coasting su Orbita Finale Target (da pericentro th=0 a th_f)
+th_s = 0; th_e = th_f; if th_e <= th_s; th_e = th_e + 2*pi; end
+segmenti{6} = {a_f, e_f, i_f, OM_f, om_f, th_s, th_e, 'Arrivo a Target', [0 1 0]};
+
+% --- 4. CICLO DI ANIMAZIONE ---
+h_sat = plot3(NaN, NaN, NaN, 'ko', 'MarkerFaceColor', 'r', 'MarkerSize', 8, 'DisplayName', 'Satellite');
+step = 100; % Punti per ogni segmento
+
+for s = 1:length(segmenti)
+    seg = segmenti{s};
+    th_v = linspace(seg{6}, seg{7}, step);
+    
+    % Crea una nuova linea per la traccia di questo segmento (cambio colore)
+    h_trail = plot3(NaN, NaN, NaN, 'Color', seg{9}, 'LineWidth', 2, 'DisplayName', seg{8});
+    t_x = []; t_y = []; t_z = [];
+    
+    for k = 1:length(th_v)
+        r = getPosAnim(seg{1}, seg{2}, seg{3}, seg{4}, seg{5}, th_v(k), mu);
+        
+        % Aggiorna satellite
+        set(h_sat, 'XData', r(1), 'YData', r(2), 'ZData', r(3));
+        
+        % Aggiorna traccia corrente
+        t_x(end+1) = r(1); t_y(end+1) = r(2); t_z(end+1) = r(3);
+        set(h_trail, 'XData', t_x, 'YData', t_y, 'ZData', t_z);
+        
+        drawnow;
+        pause(0.005); % Regola velocità animazione
+    end
+    
+    % Marker Manovra alla fine di ogni segmento
+    plot3(t_x(end), t_y(end), t_z(end), 'x', 'MarkerEdgeColor', seg{9}, 'MarkerSize', 10, 'LineWidth', 2, 'HandleVisibility', 'off');
+end
+
+legend('show', 'Location', 'bestoutside', 'FontSize', 9);
+
+% --- FUNZIONI INTERNE PER ANIMAZIONE ---
+function r_ijk = getPosAnim(a, e, i, OM, om, th, mu)
+    r_mag = (a*(1 - e^2)) / (1 + e*cos(th));
+    r_pqw = [r_mag*cos(th); r_mag*sin(th); 0];
+    R3_OM = [cos(OM) -sin(OM) 0; sin(OM) cos(OM) 0; 0 0 1];
+    R1_i  = [1 0 0; 0 cos(i) -sin(i); 0 sin(i) cos(i)];
+    R3_om = [cos(om) -sin(om) 0; sin(om) cos(om) 0; 0 0 1];
+    r_ijk = R3_OM * R1_i * R3_om * r_pqw;
+end
+
+function plotOrbitStaticAnim(a, e, i, OM, om, mu, col, stile, width, nome)
+    th = linspace(0, 2*pi, 200);
+    pts = zeros(3, 200);
+    for j = 1:200
+        r_mag = (a*(1 - e^2)) / (1 + e*cos(th(j)));
+        rpqw = [r_mag*cos(th(j)); r_mag*sin(th(j)); 0];
+        R3OM = [cos(OM) -sin(OM) 0; sin(OM) cos(OM) 0; 0 0 1];
+        R1i  = [1 0 0; 0 cos(i) -sin(i); 0 sin(i) cos(i)];
+        R3om = [cos(om) -sin(om) 0; sin(om) cos(om) 0; 0 0 1];
+        pts(:,j) = R3OM * R1i * R3om * rpqw;
+    end
+    plot3(pts(1,:), pts(2,:), pts(3,:), 'Color', [col 0.4], 'LineStyle', stile, 'LineWidth', width, 'DisplayName', nome);
 end
