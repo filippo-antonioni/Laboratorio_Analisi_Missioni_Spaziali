@@ -39,6 +39,103 @@ ast.om = deg2rad(60.16);
 lb = [0, 0, 0];
 ub = [2*pi, 2*pi, 2*pi];
 
+
+
+
+% Studio statistico per trovare la size della popolazione che mi garantisce
+% convergenza e conformità di risultati e il numero delle generazioni
+toll = 1e-3; % Una deviazione standard di 1 m/s è già un criterio severo
+max_iter = 20; 
+iter = 0;
+
+% PARTIAMO DA BASSO per forzare l'algoritmo a fare errori all'inizio
+population = 0;  
+generations = 0; 
+N_runs_pop = 80; % 40 test bastano per la statistica del while e risparmi tempo
+
+err = inf; 
+
+% Array per salvare i dati per il plot
+storia_pop = [];
+storia_err = [];
+
+fprintf('\n===================================================\n');
+fprintf(' FASE 0: RICERCA AUTOMATICA IPERPARAMETRI GA\n');
+fprintf('===================================================\n');
+
+while iter < max_iter && err > toll 
+    iter = iter + 1;
+    population = population + 10; % Aumentiamo a step di 20 per vedere bene la discesa
+    generations = generations + 10;
+    
+    
+    
+    results_dv_temp = zeros(N_runs_pop, 1);
+    
+    for k = 1:N_runs_pop
+        % Fase 1: GA
+        ga_opts = optimoptions('ga', 'PopulationSize', population, 'MaxGenerations', generations, 'Display', 'off');
+        obj_fun = @(x) objective_function(x, ast);
+        [x_ga, ~] = ga(obj_fun, 3, [], [], [], [], lb, ub, [], ga_opts);
+        
+        % Fase 2: fmincon
+        fm_opts = optimoptions('fmincon', 'Algorithm', 'sqp', 'Display', 'off');
+        [~, dv_opt] = fmincon(obj_fun, x_ga, [], [], [], [], lb, ub, @(x) constraints(x, ast), fm_opts);
+        
+        results_dv_temp(k) = dv_opt;
+    end 
+    
+    % --- IL NUOVO CONTROLLO PIÙ REALISTICO ---
+    % Invece di rmoutliers, elimino solo le divergenze matematiche (> 100 km/s)
+    % Mantengo invece tutti i "minimi locali" cattivi (es 10, 15 km/s)
+    dv_validi = results_dv_temp(results_dv_temp < 100);
+    
+    if length(dv_validi) < 5
+        err = 100; % Penalità enorme: la popolazione è così bassa che non trova niente di fisico
+    else
+        err = std(dv_validi); % Calcolo la VERA deviazione standard
+    end
+    
+    % Salvo i dati
+    storia_pop = [storia_pop, population];
+    storia_err = [storia_err, err];
+    
+    
+end
+
+if err <= toll
+    fprintf('\n>>> CONVERGENZA RAGGIUNTA! Parametri ideali stabiliti: Pop=%d, Gen=%d\n', population, generations);
+else
+    fprintf('\n>>> Raggiunto limite iterazioni. Uso parametri finali: Pop=%d, Gen=%d\n', population, generations);
+end
+
+% =========================================================================
+% PLOT DI COME COLLASSA L'ERRORE (Ora funzionerà come si deve)
+% =========================================================================
+figure('Name', 'Andamento Errore');
+plot(storia_pop, storia_err, '-o', 'LineWidth', 2.5, 'MarkerFaceColor', '#0072BD', 'MarkerSize', 8, 'Color', '#0072BD');
+hold on;
+yline(toll, '--r', 'LineWidth', 2, 'DisplayName', 'Tolleranza Target');
+grid on;
+
+% Miglioramento asse Y per non schiacciare il grafico se i primi errori sono giganti
+if max(storia_err) > 10
+    ylim([0, 10]); % Taglia i picchi assurdi iniziali per far vedere bene la discesa
+end
+
+title('Crollo della Dispersione all''aumentare di Popolazione/Generazioni');
+xlabel('Popolazione e Generazioni (Valore)');
+ylabel('Deviazione Standard (Errore) [km/s]');
+legend('Errore misurato', 'Tolleranza Target', 'Location', 'northeast');
+hold off;
+
+% A questo punto, dopo il while, puoi far partire il tuo mega-ciclo da 200 N_runs 
+% (quello del report statistico) usando esattamente la "population" e "generations" 
+% appena trovate da questo while!
+
+ opt_population=population;
+ opt_generations=generations;
+
 %Inizio ciclo for della run
 for k=1:N_runs
    
@@ -48,7 +145,7 @@ for k=1:N_runs
     tic %inizio a contare il tempo
     
     % --- FASE 1: RICERCA GLOBALE CON GA --- 
-    ga_opts = optimoptions('ga', 'PopulationSize', 200, 'MaxGenerations', 100, 'Display', 'off', 'OutputFcn', @outfun_ga);
+    ga_opts = optimoptions('ga', 'PopulationSize', opt_population, 'MaxGenerations', opt_generations, 'Display', 'off', 'OutputFcn', @outfun_ga);
     obj_fun = @(x) objective_function(x, ast);
     [x_ga, fval_ga] = ga(obj_fun, 3, [], [], [], [], lb, ub, [], ga_opts);
     
