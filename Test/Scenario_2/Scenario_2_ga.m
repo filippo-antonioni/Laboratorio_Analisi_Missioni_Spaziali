@@ -17,7 +17,6 @@ results_x = zeros(N_runs, 3);
 results_dv = zeros(N_runs, 1);
 results_time = zeros(N_runs, 1);
 
-mu = 398600;
 % Dati dell'asteroide 363505 (2003 UC20) 
 % Costante di conversione
 AU_to_km = 149597870.7; % Unità Astronomica in km
