@@ -14,8 +14,12 @@ vv_f = T(gruppo,11:13)';
 
 % Orbita iniziale (parametri kepleriani)
 orbita_iv = T(gruppo,2:7);
-a_i = orbita_iv(1); e_i = orbita_iv(2); i_i = orbita_iv(3);
-OM_i = orbita_iv(4); om_i = orbita_iv(5); th_i = orbita_iv(6);
+a_i = orbita_iv(1);
+e_i = orbita_iv(2); 
+i_i = orbita_iv(3);
+OM_i = orbita_iv(4); 
+om_i = orbita_iv(5); 
+th_i = orbita_iv(6);
 
 
 % --- 2. BIELLITTICA REALE (CON RITORNO LAMBERT) ---

@@ -164,6 +164,7 @@ for k=1:N_runs
         best_x_global = x_opt;
         best_history_ga = history_ga;
         best_history_fmincon = history_fmincon;
+        
     end
 end %fine run
 
@@ -254,15 +255,36 @@ ylabel('\DeltaV [km/s]');
 grid on;
 
 % 3. Scatter Plot 3D dello Spazio delle Variabili (Mostra i minimi locali)
-figure('Name', 'Mappa Variabili 3D');
-scatter3(rad2deg(results_x(:,1)), rad2deg(results_x(:,2)), rad2deg(results_x(:,3)), ...
-         60, results_dv, 'filled', 'MarkerEdgeColor', 'k');
+% figure('Name', 'Mappa Variabili 3D');
+% scatter3(rad2deg(results_x(:,1)), rad2deg(results_x(:,2)), rad2deg(results_x(:,3)), ...
+%          60, results_dv, 'filled', 'MarkerEdgeColor', 'k');
+% colorbar;
+% title('Soluzioni Trovate nello Spazio di Ricerca');
+% xlabel('\theta_1 Partenza [deg]');
+% ylabel('\theta_2 Arrivo [deg]');
+% zlabel('\omega_T Trasferimento [deg]');
+% grid on; view(45, 30);
+
+% 3. Scatter Plot 3D dello Spazio delle Variabili (Mostra i minimi locali)
+figure('Name', 'Mappa Variabili 3D (con Jitter)');
+
+% Aggiungiamo un leggero "rumore" casuale (es. +/- 1.5 gradi) solo per distanziare i punti nel plot
+jitter_deg = 1.5; 
+x_plot = rad2deg(results_x(:,1)) + (rand(N_runs, 1) - 0.5) * jitter_deg * 2;
+y_plot = rad2deg(results_x(:,2)) + (rand(N_runs, 1) - 0.5) * jitter_deg * 2;
+z_plot = rad2deg(results_x(:,3)) + (rand(N_runs, 1) - 0.5) * jitter_deg * 2;
+
+% Plottiamo con una trasparenza (MarkerFaceAlpha) per vedere la densità
+scatter3(x_plot, y_plot, z_plot, 60, results_dv, 'filled', ...
+    'MarkerEdgeColor', 'k', 'MarkerFaceAlpha', 0.4);
+
 colorbar;
-title('Soluzioni Trovate nello Spazio di Ricerca');
+title('Soluzioni Trovate nello Spazio di Ricerca (con Jitter)');
 xlabel('\theta_1 Partenza [deg]');
 ylabel('\theta_2 Arrivo [deg]');
 zlabel('\omega_T Trasferimento [deg]');
 grid on; view(45, 30);
+
 
 % 4. Funzione di Distribuzione Cumulativa (Probabilità di successo)
 figure('Name', 'Probabilità Cumulativa');
