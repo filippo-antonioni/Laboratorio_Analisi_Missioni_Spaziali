@@ -39,11 +39,89 @@ lb = [0, 0, 0];
 ub = [2*pi, 2*pi, 2*pi];
 obj_fun = @(x) objective_function(x, ast);
 
-fprintf('--- AVVIO ANALISI STATISTICA CON PSO (%d RUNS) ---\n', N_runs);
+% =========================================================================
+% FASE 0: RICERCA AUTOMATICA IPERPARAMETRI PSO (Studio di Sensibilità)
+% =========================================================================
+toll = 1e-4; 
+max_iter = 20; 
+iter = 0;
+
+% Partiamo dal basso per forzare errori
+swarm_size = 0;  
+max_iterations = 0; 
+N_runs_pop = 80; 
+err = inf; 
+
+% Array per salvare i dati per il plot
+storia_swarm = [];
+storia_err = [];
+
+fprintf('\n===================================================\n');
+fprintf(' FASE 0: RICERCA AUTOMATICA IPERPARAMETRI PSO\n');
+fprintf('===================================================\n');
+
+while iter < max_iter && err > toll 
+    iter = iter + 1;
+    swarm_size = swarm_size + 10; % Incremento combinato
+    max_iterations = max_iterations + 10;
+    
+    results_dv_temp = zeros(N_runs_pop, 1);
+    
+    for k = 1:N_runs_pop
+        % Fase 1: PSO
+        pso_opts = optimoptions('particleswarm', 'SwarmSize', swarm_size, 'MaxIterations', max_iterations, 'Display', 'off');
+        [x_pso, ~] = particleswarm(obj_fun, 3, lb, ub, pso_opts);
+        
+        % Fase 2: fmincon
+        fm_opts = optimoptions('fmincon', 'Algorithm', 'sqp', 'Display', 'off');
+        [~, dv_opt] = fmincon(obj_fun, x_pso, [], [], [], [], lb, ub, @(x) constraints(x, ast), fm_opts);
+        
+        results_dv_temp(k) = dv_opt;
+    end 
+    
+    % Nessun filtro, prendo la deviazione standard pura di tutti i valori (inclusi quelli sballati)
+    err = std(results_dv_temp); 
+    
+    % Salvo i dati
+    storia_swarm = [storia_swarm, swarm_size];
+    storia_err = [storia_err, err];
+    
+   
+end
+
+if err <= toll
+    fprintf('\n>>> CONVERGENZA RAGGIUNTA! Parametri ideali: SwarmSize=%d, MaxIter=%d\n', swarm_size, max_iterations);
+else
+    fprintf('\n>>> Raggiunto limite iterazioni. Uso parametri finali: SwarmSize=%d, MaxIter=%d\n', swarm_size, max_iterations);
+end
+
+% PLOT ANDAMENTO ERRORE PSO
+figure('Name', 'Andamento Errore PSO');
+plot(storia_swarm, storia_err, '-o', 'LineWidth', 2.5, 'MarkerFaceColor', '#D95319', 'MarkerSize', 8, 'Color', '#D95319');
+hold on;
+yline(toll, '--r', 'LineWidth', 2, 'DisplayName', 'Tolleranza Target');
+grid on;
+% Taglia l'asse Y se i primi errori dovuti a pochi individui vanno a infinito
+if max(storia_err) > 10
+    ylim([0, 10]); 
+end
+title('Crollo della Dispersione all''aumentare di SwarmSize/MaxIterations');
+xlabel('SwarmSize e MaxIterations (Valore)');
+ylabel('Deviazione Standard (Errore) [km/s]');
+legend('Errore misurato', 'Tolleranza Target', 'Location', 'northeast');
+hold off;
+
+% Fissiamo i parametri trovati per il ciclo finale
+opt_swarm_size = swarm_size;
+opt_max_iterations = max_iterations;
+
+% =========================================================================
+% FASE 1 & 2: AVVIO ANALISI STATISTICA CON PARAMETRI OTTIMI
+% =========================================================================
+fprintf('\n--- AVVIO ANALISI STATISTICA CON PSO (%d RUNS) ---\n', N_runs);
 
 % --- CICLO DI OTTIMIZZAZIONE MONTE CARLO ---
 for k = 1:N_runs
-    
     
     % Azzero le variabili globali per la singola run
     history_pso = [];
@@ -51,8 +129,8 @@ for k = 1:N_runs
     
     tic % Inizio a contare il tempo
     
-    % --- FASE 1: RICERCA GLOBALE CON PSO ---
-    pso_opts = optimoptions('particleswarm', 'SwarmSize', 200, 'MaxIterations', 100, ...
+    % --- FASE 1: RICERCA GLOBALE CON PSO (Usa i parametri appena trovati) ---
+    pso_opts = optimoptions('particleswarm', 'SwarmSize', opt_swarm_size, 'MaxIterations', opt_max_iterations, ...
         'Display', 'off', 'OutputFcn', @outfun_pso);
     [x_pso, fval_pso] = particleswarm(obj_fun, 3, lb, ub, pso_opts);
     
@@ -66,8 +144,6 @@ for k = 1:N_runs
     results_dv(k) = dv_opt;
     results_x(k, :) = x_opt;
     results_time(k) = run_time;
-    
-    
     
     % Aggiorno il record assoluto e salvo la storia per i plot finali
     if dv_opt < best_dv_global
@@ -121,18 +197,11 @@ fprintf('Omega_T Trasferimento:   %.2f deg\n', rad2deg(best_x_global(3)));
 % 1. Scatter Plot della dispersione dei Delta V (Punti Singoli centrati)
 figure('Name', 'Dispersione Statistica (Punti)');
 hold on; grid on;
-
-% Disegno tutti i punti (uno per ogni run)
 scatter(1:N_runs, results_dv, 40, 'filled', 'MarkerFaceColor', '#0072BD', 'MarkerEdgeAlpha', 0.6, 'DisplayName', 'Singola Run');
-
-% Evidenzio la run migliore in assoluto con una stella verde gigante
 [~, best_run_idx] = min(results_dv);
 plot(best_run_idx, min_dv, 'p', 'MarkerSize', 15, 'MarkerFaceColor', '#77AC30', 'MarkerEdgeColor', 'k', 'DisplayName', 'Ottimo Assoluto');
-
-% Linee di riferimento orizzontali
 yline(media_dv, '--r', 'LineWidth', 2, 'DisplayName', 'Media');
 yline(prctile_75, ':k', 'LineWidth', 1.5, 'DisplayName', '75° Percentile');
-
 title('Dispersione dei Costi per ogni singola Run (Monte Carlo - PSO)');
 xlabel('Numero della Run');
 ylabel('\DeltaV [km/s]');
@@ -142,7 +211,6 @@ legend('Location', 'northeast');
 min_reale = min(results_dv);
 max_reale = max(results_dv);
 delta_reale = max_reale - min_reale;
-
 if delta_reale < 1e-5 % Caso molto compatto
     margine = 1e-6; 
 else
@@ -158,12 +226,18 @@ title('Boxplot: Dispersione e Outliers (PSO)');
 ylabel('\DeltaV [km/s]');
 grid on;
 
-% 3. Scatter Plot 3D dello Spazio delle Variabili (Mostra i minimi locali)
-figure('Name', 'Mappa Variabili 3D');
-scatter3(rad2deg(results_x(:,1)), rad2deg(results_x(:,2)), rad2deg(results_x(:,3)), ...
-         60, results_dv, 'filled', 'MarkerEdgeColor', 'k');
+figure('Name', 'Mappa Variabili 3D (con Jitter)');
+% Aggiungiamo un leggero "rumore" casuale (es. +/- 1.5 gradi) solo per distanziare i punti nel plot
+jitter_deg = 1.5; 
+x_plot = rad2deg(results_x(:,1)) + (rand(N_runs, 1) - 0.5) * jitter_deg * 2;
+y_plot = rad2deg(results_x(:,2)) + (rand(N_runs, 1) - 0.5) * jitter_deg * 2;
+z_plot = rad2deg(results_x(:,3)) + (rand(N_runs, 1) - 0.5) * jitter_deg * 2;
+
+% Plottiamo con una trasparenza (MarkerFaceAlpha) per vedere la densità
+scatter3(x_plot, y_plot, z_plot, 60, results_dv, 'filled', ...
+    'MarkerEdgeColor', 'k', 'MarkerFaceAlpha', 0.4);
 colorbar;
-title('Soluzioni Trovate nello Spazio di Ricerca (PSO)');
+title('Soluzioni Trovate nello Spazio di Ricerca (PSO con Jitter)');
 xlabel('\theta_1 Partenza [deg]');
 ylabel('\theta_2 Arrivo [deg]');
 zlabel('\omega_T Trasferimento [deg]');
@@ -193,27 +267,19 @@ if ~isempty(best_history_pso)
     best_val_pso = best_history_pso(:,2);
     swarm_vals = best_history_pso(:, 3:end);
     
-    % Pulizia valori per il plot (evitiamo che i 1e6 schiaccino il grafico)
     swarm_vals(swarm_vals > 100) = NaN; 
     
-    % Calcolo della media dello sciame ad ogni iterazione
     mean_val_pso = mean(swarm_vals, 2, 'omitnan');
     
-    % 1. Plot di tutte le particelle in grigio chiaro
     h_altri = plot(iterazioni, swarm_vals, 'Color', [0.85 0.85 0.85], 'LineWidth', 0.5);
-    
-    % 2. Plot della Media in ciano (linea continua)
     h_mean = plot(iterazioni, mean_val_pso, '-c', 'LineWidth', 2);
-    
-    % 3. Plot del Global Best in blu (linea continua spessa)
     h_best = plot(iterazioni, best_val_pso, '-b', 'LineWidth', 2.5);
     
     title('Fase 1: Convergenza Particle Swarm (Run Migliore)');
     xlabel('Iterazioni'); ylabel('\DeltaV Totale [km/s]');
     
-    % Legenda aggiornata
     legend([h_best, h_mean, h_altri(1)], ...
-        {'Miglior Particella (Global Best)', 'Media dello Sciame', 'Altre Particelle dello Sciame'}, ...
+        {'Miglior Particella (Global Best)', 'Media dello Sciame', 'Altre Particelle'}, ...
         'Location', 'northeast');
 end
 
