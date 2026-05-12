@@ -241,7 +241,7 @@ if ~isinf(DV_min)
     % FIGURA 2: Visualizzazione delle Orbite 3D
     % ---------------------------------------------------------
     figure('Name', 'Orbite nel Sistema Solare');
-    hold on; grid on; axis equal; view(3);F
+    hold on; grid on; axis equal; view(3);
     
     % Il Sole a scala reale (con bordo scuro a contrasto)
     plot3(0, 0, 0, 'oy', 'MarkerSize', 8, 'MarkerFaceColor', '#FFCC00', 'MarkerEdgeColor', 'y', 'LineWidth', 1.5, 'DisplayName', 'Sole');
