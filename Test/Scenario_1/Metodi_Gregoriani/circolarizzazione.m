@@ -41,6 +41,10 @@ a_aux_max = 320000;
 N_search  = 5000;
 a_aux_vec = linspace(a_aux_min, a_aux_max, N_search);
 dv_total_vec = zeros(1, N_search);
+
+dv_salita_vec=zeros(2,N_search);
+dv_discesa_vec=zeros(2,N_search);
+
 dt_total_vec = zeros(1, N_search);
 
 % --- contributi separati al DeltaV ---
@@ -104,6 +108,10 @@ dv_plane = abs(dv2);
 dv_transfer_vec(k) = dv_transfer;
 dv_plane_vec(k)    = dv_plane;
 
+dv_salita_vec(:,k) = [abs(dv1_1);abs(dv1_2)];
+dv_discesa_vec(:,k)=[abs(dv4_1);abs(dv4_2)];
+
+
 % COSTO E TEMPO TOTALE
 dv_total_vec(k) = dv_transfer + dv_plane + abs(dv3);
 
@@ -149,6 +157,16 @@ legend('\DeltaV totale', ...
        '\DeltaV cambio piano', ...
        'a_{aux} ottimo', ...
        'Location','best');
+
+figure;
+
+
+plot(a_aux_vec,dv_salita_vec(1,:),a_aux_vec,dv_salita_vec(2,:), ...
+    a_aux_vec,dv_discesa_vec(1,:),a_aux_vec,dv_discesa_vec(2,:), ...
+    a_aux_vec,dv_transfer_vec);
+legend('Salita 1','Salita 2','Discesa 1','Discesa 2','DV trasferimenti');
+grid on;
+title('DeltaV salita e discesa');
 
 % -------------------------------------------------------------------------
 % 3. PLOT 3D COMPLETO
@@ -269,7 +287,7 @@ a_t2   = (a_aux + r_p_f)/2;
 e_t2   = (a_aux - r_p_f)/(a_aux + r_p_f);
 
 % --- 1. SETUP SCENA ---
-fig_anim = figure('Name', 'Simulazione Dinamica Trasferimento Orbitale Circolare', 'Color', 'w', 'Units','normalized','Position',[0.1 0.1 0.8 0.8]);
+fig_anim = figure('Name', 'Simulazione Dinamica Trasferimento Orbitale Circolare');
 hold on; grid on; axis equal; view(35, 25);
 xlabel('X [km]'); ylabel('Y [km]'); zlabel('Z [km]');
 title('Animazione Sequenza Manovre (Orbita Ausiliaria Circolare)', 'FontSize', 14);
