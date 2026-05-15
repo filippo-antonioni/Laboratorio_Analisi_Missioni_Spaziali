@@ -37,7 +37,7 @@ r_p_f = a_f*(1-e_f);                    % raggio pericentro orbita finale
 % L'orbita ausiliaria deve essere più grande dei pericentri per avere senso
 % nei trasferimenti bitangenti 'pa' e 'ap'.
 a_aux_min = max(r_p_i, r_p_f) + 500;    % a_aux_min = (r_p_i + r_a_f)/2 nel codice buttato;
-a_aux_max = 320000;                     
+a_aux_max = 900000;                     
 N_search  = 5000;
 a_aux_vec = linspace(a_aux_min, a_aux_max, N_search);
 dv_total_vec = zeros(1, N_search);
@@ -107,8 +107,8 @@ dv_plane = abs(dv2);
 dv_transfer_vec(k) = dv_transfer;
 dv_plane_vec(k)    = dv_plane;
 
-dv_salita_vec(:,k) = [abs(dv1_1);abs(dv1_2)];
-dv_discesa_vec(:,k)=[abs(dv4_1);abs(dv4_2)];
+dv_salita_vec(:,k) = [dv1_1;dv1_2];
+dv_discesa_vec(:,k)=[dv4_1;dv4_2];
 
 % COSTO E TEMPO TOTALE
 dv_total_vec(k) = dv_transfer + dv_plane + abs(dv3);
