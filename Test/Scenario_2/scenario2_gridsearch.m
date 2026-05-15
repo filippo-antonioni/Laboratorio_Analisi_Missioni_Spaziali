@@ -2,7 +2,9 @@
 % SCENARIO #2: Trasferimento Diretto Terra -> Asteroide 363505 (2003 UC20)
 % Metodo: Grid-Search Iterativa con Restringimento Automatico
 % =========================================================================
-clear; clc; close all;
+clear; 
+clc;
+close all;
 
 % --- 1. DATI E COSTANTI FISICHE ---
 mu_sun  = 1.32712440018e11; % Parametro gravitazionale del Sole [km^3/s^2]
@@ -30,14 +32,15 @@ tolleranza_DV = 0.0001; % Tolleranza per fermare la ricerca [km/s]
 max_iter      = 10;     % Numero massimo di iterazioni (zoom-in) per sicurezza
 N_punti       = 301;    % Punti per griglia (numero dispari per convergenza monotona)
 
-% Centri iniziali e ampiezze (partiamo esplorando tutto il cerchio da 0 a 2*pi)
+
+% Centri iniziali e ampiezze (dimensione iniziale da 0 a 2*pi)
 centro_th1 = pi; ampiezza_th1 = pi; 
 centro_th2 = pi; ampiezza_th2 = pi;
 centro_omT = pi; ampiezza_omT = pi;
 
 diff_DV = inf;       % Inizializza la differenza con un valore enorme
 DV_min_old = 1e6;    % Valore fittizio di partenza
-iter = 1;            % Contatore cicli
+iter = 0;            % Contatore cicli
 
 fprintf('Inizio Ottimizzazione Iterativa...\n');
 fprintf('Tolleranza impostata: %.4f km/s\n\n', tolleranza_DV);
@@ -46,7 +49,7 @@ fprintf('Tolleranza impostata: %.4f km/s\n\n', tolleranza_DV);
 storia_DV = [];
 
 while diff_DV > tolleranza_DV && iter <= max_iter
-    
+    iter=iter+1;
     fprintf('--- Macro-Iterazione %d ---\n', iter);
     
     % Creazione dei vettori griglia limitati intorno al centro attuale
@@ -136,7 +139,7 @@ while diff_DV > tolleranza_DV && iter <= max_iter
                     continue;
                 end
                 
-                % CALCOLO DELLE VELOCITÀ tramite par2car
+                % CALCOLO DELLE VELOCITÀ 
                 [~, v1T] = par2car(a_T_calc, e_T_calc, i_trasf, OM_transf, omT, th1_T, mu_sun);
                 [~, v2T] = par2car(a_T_calc, e_T_calc, i_trasf, OM_transf, omT, th2_T, mu_sun);
                 
@@ -164,17 +167,17 @@ while diff_DV > tolleranza_DV && iter <= max_iter
     DV_min_old = DV_min;
     storia_DV = [storia_DV, DV_min];
     
-    % I nuovi centri diventano gli ottimi appena trovati
+    % Aggiornamento dei centri con gli ottimi trovati 
     centro_th1 = ottimo_th1;
     centro_th2 = ottimo_th2;
     centro_omT = ottimo_omT;
     
-    % Riduciamo l'ampiezza di ricerca del 50%
+    % Dimezzazione dell'ampiezza dell'intervallo
     ampiezza_th1 = ampiezza_th1 / 2;
     ampiezza_th2 = ampiezza_th2 / 2;
     ampiezza_omT = ampiezza_omT / 2;
     
-    iter = iter + 1;
+    
 end
 
 % --- 4. STAMPA DEI RISULTATI FINALI ---
@@ -187,7 +190,7 @@ else
     fprintf('Iterazioni completate  : %d\n', iter-1);
     fprintf('Delta V Totale Minimo  : %.4f km/s\n', DV_min);
     
-    % Riportiamo gli angoli tra 0 e 360 gradi usando mod()
+    
     fprintf('Anomalia vera Terra    : %.2f deg\n', rad2deg(mod(ottimo_th1, 2*pi)));
     fprintf('Anomalia vera Asteroide: %.2f deg\n', rad2deg(mod(ottimo_th2, 2*pi)));
     fprintf('Argomento pericentro T.: %.2f deg\n', rad2deg(mod(ottimo_omT, 2*pi)));
@@ -195,6 +198,7 @@ else
     fprintf('Eccentricità trasf.    : %.4f\n', ottimo_eT);
     fprintf('Semiasse magg. trasf.  : %.2f km (%.3f AU)\n', ottimo_aT, ottimo_aT/AU);
 end
+
 
 % =========================================================================
 %  --- 5. PLOTTING DEL PROCESSO E DEL RISULTATO ---
@@ -206,7 +210,7 @@ if ~isinf(DV_min)
     % ---------------------------------------------------------
     if exist('storia_DV', 'var')
         figure('Name', 'Processo di Ottimizzazione');
-        plot(1:length(storia_DV), storia_DV, '-ok', 'LineWidth', 1.5, 'MarkerFaceColor', 'b');
+        plot(1:length(storia_DV), storia_DV, '-oc', 'LineWidth', 1.5, 'MarkerFaceColor', 'b');
         grid on;
         title('Convergenza del \DeltaV Totale Minimo (Grid Search)');
         xlabel('Macro-Iterazioni (Zoom-in)');
@@ -236,6 +240,12 @@ if ~isinf(DV_min)
             OM_transf_opt = 2*pi - acos(N_vers_opt(1));
         end
     end
+
+
+    
+    
+
+
     
     % ---------------------------------------------------------
     % FIGURA 2: Visualizzazione delle Orbite 3D
@@ -243,7 +253,7 @@ if ~isinf(DV_min)
     figure('Name', 'Orbite nel Sistema Solare');
     hold on; grid on; axis equal; view(3);
     
-    % Il Sole a scala reale (con bordo scuro a contrasto)
+    % Sole
     plot3(0, 0, 0, 'oy', 'MarkerSize', 8, 'MarkerFaceColor', '#FFCC00', 'MarkerEdgeColor', 'y', 'LineWidth', 1.5, 'DisplayName', 'Sole');
     
     % Generazione punti per tracciare le ellissi complete
@@ -264,7 +274,7 @@ if ~isinf(DV_min)
     % Plot Orbita Asteroide
     plot3(r_A_plot(1,:), r_A_plot(2,:), r_A_plot(3,:), 'r', 'LineWidth', 1.2, 'DisplayName', 'Orbita Asteroide 363505');
     
-    % Plot Orbita di Trasferimento (intera, tratteggiata)
+    % Plot Orbita di Trasferimento 
     plot3(r_Trasf_plot(1,:), r_Trasf_plot(2,:), r_Trasf_plot(3,:), '--g', 'LineWidth', 1.5, 'DisplayName', 'Orbita Trasferimento');
     
     % Plot Punti di Partenza (Terra) e Arrivo (Asteroide)
@@ -300,7 +310,7 @@ if ~isinf(DV_min)
         [r_Arco_plot(:,idx), ~] = par2car(ottimo_aT, ottimo_eT, i_trasf_opt, OM_transf_opt, ottimo_omT, theta_arco(idx), mu_sun);
     end
     
-    % Plottiamo l'arco sopra la linea tratteggiata (spessore 3.5, colore verde continuo)
+    % Plot arco sopra la linea tratteggiata (spessore 3.5, colore verde continuo)
     plot3(r_Arco_plot(1,:), r_Arco_plot(2,:), r_Arco_plot(3,:), '-g', 'LineWidth', 3.5, 'DisplayName', 'Tratto Percorso (Volo)');
     % ---------------------------------------------------------
     
@@ -308,4 +318,103 @@ if ~isinf(DV_min)
     title(sprintf('Trasferimento Diretto: Terra -> Asteroide 363505\n\\DeltaV = %.4f km/s', DV_min));
     xlabel('X [km]'); ylabel('Y [km]'); zlabel('Z [km]');
     legend('Location', 'best');
+
+    % ---------------------------------------------------------
+    % NUOVA FIGURA: FASCIO DI ORBITE 
+    % 
+    % ---------------------------------------------------------
+    figure('Name', 'Fascio di Orbite Secanti (\omega_T variabile)');
+    hold on; grid on; axis equal; view(3);
+    
+    % --- CREAZIONE DEL SOLE 3D LUMINOSO ---
+    [xS, yS, zS] = sphere(100);
+    R_sun_plot = R_sun * 4; % Ingrandito 4x per visibilità
+    surf(xS * R_sun_plot, yS * R_sun_plot, zS * R_sun_plot, ...
+        'FaceColor', '#FF8C00', 'EdgeColor', 'none', ...
+        'FaceLighting', 'none', 'AmbientStrength', 1, 'HandleVisibility', 'off');
+    % Marker invisibile solo per avere la voce bella nella legenda
+    plot3(0, 0, 0, 'oy', 'MarkerSize', 8, 'MarkerFaceColor', '#FF8C00', 'LineStyle', 'none', 'DisplayName', 'Sole');
+    
+    % --- MARKER PARTENZA E ARRIVO  ---
+    plot3(r1_opt(1), r1_opt(2), r1_opt(3), 'ob', 'MarkerFaceColor', 'b', 'MarkerSize', 4, 'DisplayName', 'Punto Partenza');
+    plot3(r2_opt(1), r2_opt(2), r2_opt(3), 'or', 'MarkerFaceColor', 'r', 'MarkerSize', 4, 'DisplayName', 'Punto Arrivo');
+    
+    % --- CICLO FASCIO DI ORBITE ---
+    step_w = deg2rad(2);
+    omT_range = 0 : step_w : 2*pi;
+    
+    colore_azzurrino = [0.6, 0.8, 1];
+    first_dashed_plotted = false; % Flag per non intasare la legenda
+    
+    for idx_w = 1:length(omT_range)
+        omT_test = omT_range(idx_w);
+        
+        
+        R_OM = [ cos(OM_transf_opt),  sin(OM_transf_opt), 0;
+                -sin(OM_transf_opt),  cos(OM_transf_opt), 0;
+                       0,               0,        1];
+        R_i =  [1,        0,               0;
+                0,  cos(i_trasf_opt),  sin(i_trasf_opt);
+                0, -sin(i_trasf_opt),  cos(i_trasf_opt)];
+        R_om = [ cos(omT_test),  sin(omT_test), 0;
+                -sin(omT_test),  cos(omT_test), 0;
+                       0,         0,  1];
+        
+        T_Elio_PF = R_om * R_i * R_OM; 
+        r1_PF = T_Elio_PF * r1_opt;
+        r2_PF = T_Elio_PF * r2_opt;
+        
+        th1_T = atan2(r1_PF(2), r1_PF(1));
+        th2_T = atan2(r2_PF(2), r2_PF(1));
+        
+        norm_r1 = norm(r1_opt);
+        norm_r2 = norm(r2_opt);
+        
+        den_e = norm_r1 * cos(th1_T) - norm_r2 * cos(th2_T);
+        if abs(den_e) < 1e-6
+            continue; 
+        end
+        
+        e_T_test = (norm_r2 - norm_r1) / den_e;
+        
+        % Filtro vincoli fisici (ellisse chiusa e no schianto nel Sole)
+        if e_T_test >= 0 && e_T_test < 1
+            p_T_test = norm_r1 * (1 + e_T_test * cos(th1_T));
+            a_T_test = p_T_test / (1 - e_T_test^2);
+            r_peri = a_T_test * (1 - e_T_test);
+            
+            if r_peri > (R_sun + margine)
+                
+                % Calcolo dei punti dell'orbita grigia
+                theta_plot = linspace(0, 2*pi, 150);
+                r_bundle = zeros(3, length(theta_plot));
+                for p_idx = 1:length(theta_plot)
+                    [r_bundle(:,p_idx), ~] = par2car(a_T_test, e_T_test, i_trasf_opt, OM_transf_opt, omT_test, theta_plot(p_idx), mu_sun);
+                end
+                
+               
+                if ~first_dashed_plotted
+                    plot3(r_bundle(1,:), r_bundle(2,:), r_bundle(3,:), '--', 'Color', colore_azzurrino, 'LineWidth', 0.5, 'DisplayName', 'Fascio sub-ottimale (\Delta\omega_T = 2°)');
+                    first_dashed_plotted = true;
+                else
+                    plot3(r_bundle(1,:), r_bundle(2,:), r_bundle(3,:), '--', 'Color', colore_azzurrino, 'LineWidth', 0.5, 'HandleVisibility', 'off');
+                end
+            end
+        end
+    end
+    
+    % --- ORBITA OTTIMA VERA ---
+    theta_plot = linspace(0, 2*pi, 300);
+    r_Trasf_opt_plot = zeros(3, length(theta_plot));
+    for p_idx = 1:length(theta_plot)
+        [r_Trasf_opt_plot(:,p_idx), ~] = par2car(ottimo_aT, ottimo_eT, i_trasf_opt, OM_transf_opt, ottimo_omT, theta_plot(p_idx), mu_sun);
+    end
+    
+    plot3(r_Trasf_opt_plot(1,:), r_Trasf_opt_plot(2,:), r_Trasf_opt_plot(3,:), '-r', 'LineWidth', 3, 'DisplayName', 'Trasferimento OTTIMO');
+    
+    % Formattazione finale del plot
+    title('Fascio di Orbite fissati $\theta_i$ e $\theta_f$', 'Interpreter', 'latex', 'FontSize', 14);
+    xlabel('X [km]'); ylabel('Y [km]'); zlabel('Z [km]');
+    legend('Location', 'northeast');
+    hold off;
 end
