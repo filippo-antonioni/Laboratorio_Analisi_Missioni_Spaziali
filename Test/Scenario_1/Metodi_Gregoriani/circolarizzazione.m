@@ -16,7 +16,7 @@ close all;
     % --- Orbita target / finale ---
     rr_f   = T(gruppo, 8:10)';
     vv_f   = T(gruppo, 11:13)';
-    mu = 398600;  % [km^3/s^2]
+    mu = 398600; 
     [a_f, e_f, i_f, OM_f, om_f, th_f] = car2par(rr_f, vv_f, mu);
     
     % --- Orbita iniziale ---
@@ -177,32 +177,32 @@ hold on; grid on; axis equal; view(35, 25);
 xlabel('X [km]'); ylabel('Y [km]'); zlabel('Z [km]');
 title('Sequenza di Manovre e Nodi (Orbita Ausiliaria Circolare)','Color','w','FontSize',14);
 
-% Terra con Mappa Topografica (Nativo in MATLAB)
+% Terra con Mappa Topografica 
 load topo; 
 [XE, YE, ZE] = sphere(50);
 surf(XE*6371, YE*6371, ZE*6371, 'CData', topo, 'FaceColor', 'texturemap', 'EdgeColor', 'none', 'HandleVisibility', 'off');
-colormap(ax, topomap1); % Applica i colori della terra
+colormap(ax, topomap1); 
 
 dth = deg2rad(1);
 
 % --- PLOT ORBITE ---
 % 1. Orbita Iniziale
-plotOrbit(a_i, e_i, i_i, OM_i, om_i, 0, 2*pi, dth, mu, [0.2 0.6 1], '-', 1.5, '1. Orbita Iniziale');
+plotOrbit_circolarizzazione(a_i, e_i, i_i, OM_i, om_i, 0, 2*pi, dth, mu, [0.2 0.6 1], '-', 1.5, '1. Orbita Iniziale');
 % 2. Trasferimento Salita
 r_a_t1 = a_aux; 
 a_t1 = (r_p_i + r_a_t1)/2;
 e_t1 = (r_a_t1 - r_p_i)/(r_a_t1 + r_p_i);
-plotOrbit(a_t1, e_t1, i_i, OM_i, om_i, 0, pi, dth, mu, [1 0.6 0.1], '-', 2, '2. Trasferimento Salita');
+plotOrbit_circolarizzazione(a_t1, e_t1, i_i, OM_i, om_i, 0, pi, dth, mu, [1 0.6 0.1], '-', 2, '2. Trasferimento Salita');
 % 3. Orbita Ausiliaria (pre-piano)
-plotOrbit(a_aux, e_aux, i_i, OM_i, om_i, 0, 2*pi, dth, mu, [1 1 0], '--', 1.5, '3. Orbita Aux (Pre-Piano)');
+plotOrbit_circolarizzazione(a_aux, e_aux, i_i, OM_i, om_i, 0, 2*pi, dth, mu, [1 1 0], '--', 1.5, '3. Orbita Aux (Pre-Piano)');
 % 4. Orbita Ausiliaria (post-piano)
-plotOrbit(a_aux, e_aux, i_f, OM_f, om_tmp, 0, 2*pi, dth, mu, [0.8 0.2 0.8], '-.', 1.5, '4. Orbita Aux (Post-Piano)');
+plotOrbit_circolarizzazione(a_aux, e_aux, i_f, OM_f, om_tmp, 0, 2*pi, dth, mu, [0.8 0.2 0.8], '-.', 1.5, '4. Orbita Aux (Post-Piano)');
 % 5. Trasferimento Discesa
 a_t2 = (a_aux + r_p_f)/2;
 e_t2 = (a_aux - r_p_f)/(a_aux + r_p_f);
-plotOrbit(a_t2, e_t2, i_f, OM_f, om_f, pi, 2*pi, dth, mu, [1 0.3 0.3], ':', 2, '5. Trasferimento Discesa');
+plotOrbit_circolarizzazione(a_t2, e_t2, i_f, OM_f, om_f, pi, 2*pi, dth, mu, [1 0.3 0.3], ':', 2, '5. Trasferimento Discesa');
 % 6. Orbita Finale Target
-plotOrbit(a_f, e_f, i_f, OM_f, om_f, 0, 2*pi, dth, mu, [0 1 0], '-', 2, '6. Orbita Target');
+plotOrbit_circolarizzazione(a_f, e_f, i_f, OM_f, om_f, 0, 2*pi, dth, mu, [0 1 0], '-', 2, '6. Orbita Target');
 
 % --- PLOT MARKER DELLE MANOVRE (Calcolati analiticamente) ---
 % M1: Partenza dal pericentro iniziale (th = 0)
@@ -226,171 +226,101 @@ plot3(P5(1), P5(2), P5(3), 'wo', 'MarkerFaceColor', 'c', 'MarkerSize', 7, 'Displ
 legend('show','Location','eastoutside','TextColor','w','Color','k','FontSize',11);
 hold off;
 
-% =========================================================================
-% FUNZIONI DI SUPPORTO (da inserire alla fine del file o salvare a parte)
-% =========================================================================
-
-function plotOrbit(a, e, i, OM, om, th_start, th_end, dth, mu, color, linestyle, linewidth, name)
-    % PLOTORBIT: Traccia un arco di orbita
-    th = th_start:dth:th_end;
-    if th(end) ~= th_end
-        th = [th, th_end];
-    end
-
-    r = (a*(1 - e^2)) ./ (1 + e*cos(th));
-
-    % Perifocali
-    r_pqw = [r.*cos(th); r.*sin(th); zeros(1, length(th))];
-
-    % Matrici di rotazione
-    R3_OM = [cos(OM) -sin(OM) 0; sin(OM) cos(OM) 0; 0 0 1];
-    R1_i  = [1 0 0; 0 cos(i) -sin(i); 0 sin(i) cos(i)];
-    R3_om = [cos(om) -sin(om) 0; sin(om) cos(om) 0; 0 0 1];
-
-    T_pqw2ijk = R3_OM * R1_i * R3_om;
-
-    r_ijk = T_pqw2ijk * r_pqw;
-
-    plot3(r_ijk(1,:), r_ijk(2,:), r_ijk(3,:), 'Color', color, 'LineStyle', linestyle, ...
-          'LineWidth', linewidth, 'DisplayName', name);
-end
-
-function r_ijk = getPos3D(a, e, i, OM, om, th)
-    % GETPOS3D: Calcola il vettore posizione 3D [X; Y; Z] per una data anomalia vera
-    r = (a*(1 - e^2)) / (1 + e*cos(th));
-    
-    % Vettore in componenti perifocali (piano dell'orbita)
-    r_pqw = [r*cos(th); r*sin(th); 0];
-    
-    % Matrici di rotazione
-    R3_OM = [cos(OM) -sin(OM) 0; sin(OM) cos(OM) 0; 0 0 1];
-    R1_i  = [1 0 0; 0 cos(i) -sin(i); 0 sin(i) cos(i)];
-    R3_om = [cos(om) -sin(om) 0; sin(om) cos(om) 0; 0 0 1];
-    
-    % Rotazione da perifocale a inerziale geocentrico (ECI)
-    T_pqw2ijk = R3_OM * R1_i * R3_om;
-    r_ijk = T_pqw2ijk * r_pqw;
-end
 
 %% =========================================================================
 % 4. ANIMAZIONE 3D AVANZATA - TRACCIA MULTI-COLORE E ORBITE DI RIFERIMENTO
 % =========================================================================
-% Ricalcolo parametri ellissi di trasferimento (già calcolati per il plot 3D,
-% li ridefiniamo per sicurezza e leggibilità della section)
-r_p_i  = a_i*(1-e_i);
-r_p_f  = a_f*(1-e_f);
-a_t1   = (r_p_i + a_aux)/2;
-e_t1   = (a_aux - r_p_i)/(a_aux + r_p_i);
-a_t2   = (a_aux + r_p_f)/2;
-e_t2   = (a_aux - r_p_f)/(a_aux + r_p_f);
 
 % --- 1. SETUP SCENA ---
-fig_anim = figure('Name', 'Simulazione Dinamica Trasferimento Orbitale Circolare', 'Color', 'w', 'Units','normalized','Position',[0.1 0.1 0.8 0.8]);
+fig_anim = figure('Name', 'Simulazione Dinamica Trasferimento Orbitale Circolare', ...
+    'Units','normalized','Position',[0.1 0.1 0.8 0.8]);
+
+% Assi scuri ad alto contrasto
+ax = axes;
+set(ax, 'Color','k', 'XColor','w', 'YColor','w', 'ZColor','w');
 hold on; grid on; axis equal; view(35, 25);
 xlabel('X [km]'); ylabel('Y [km]'); zlabel('Z [km]');
-title('Animazione Sequenza Manovre (Orbita Ausiliaria Circolare)', 'FontSize', 14);
+title('Animazione Sequenza Manovre (Orbita Ausiliaria Circolare)', 'Color','w','FontSize', 14);
 
 % Terra 3D
 [xE, yE, zE] = sphere(50);
 try
     load topo topo topomap1;
-    surf(xE * 6371, yE * 6371, zE * 6371, 'FaceColor', 'texturemap', 'CData', topo, 'EdgeColor', 'none', 'HandleVisibility', 'off');
-    colormap(topomap1);
+    surf(xE * 6371, yE * 6371, zE * 6371, 'FaceColor', 'texturemap', 'CData', topo, ...
+         'EdgeColor', 'none', 'HandleVisibility', 'off');
+    colormap(ax, topomap1);
 catch
     surf(xE * 6371, yE * 6371, zE * 6371, 'FaceColor', [0.1 0.4 0.8], 'EdgeColor', 'none');
 end
 
-% --- 2. PLOT ORBITE DI RIFERIMENTO (Tratteggiate) ---
-plotOrbitStaticAnim(a_i, e_i, i_i, OM_i, om_i, mu, [0.2 0.6 1], '--', 1, 'Rif. Iniziale');
-plotOrbitStaticAnim(a_aux, e_aux, i_i, OM_i, om_i, mu, [1 1 0], '--', 1, 'Rif. Aux Pre-Piano');
-plotOrbitStaticAnim(a_aux, e_aux, i_f, OM_f, om_f, mu, [0.8 0.2 0.8], '--', 1, 'Rif. Aux Post-Piano/Peri');
-plotOrbitStaticAnim(a_f, e_f, i_f, OM_f, om_f, mu, [0 1 0], '--', 1, 'Rif. Finale Target');
+% --- 2. PLOT ORBITE DI RIFERIMENTO (Tratteggiate per la legenda) ---
+plotOrbit_circolarizzazioneStaticAnim(a_i, e_i, i_i, OM_i, om_i, mu, [0.2 0.6 1], '--', 1, 'Rif. Iniziale');
+plotOrbit_circolarizzazioneStaticAnim(a_aux, e_aux, i_i, OM_i, om_i, mu, [1 1 0], '--', 1, 'Rif. Parcheggio Pre-Piano');
+plotOrbit_circolarizzazioneStaticAnim(a_aux, e_aux, i_f, OM_f, om_f, mu, [0.8 0.2 0.8], '--', 1, 'Rif. Parcheggio Post-Piano');
+plotOrbit_circolarizzazioneStaticAnim(a_f, e_f, i_f, OM_f, om_f, mu, [0 1 0], '--', 1, 'Rif. Finale Target');
 
-% --- 3. DEFINIZIONE SEGMENTI E COLORI TRACCIA ---
-% Ogni riga: {a, e, i, OM, om, th_start, th_end, nome, colore_traccia}
+% --- 3. DEFINIZIONE SEGMENTI ---
+num_punti_curva = 500; 
+
 segmenti = {};
+% 1. Coasting iniziale verso il pericentro
+th_s = th_i; th_e = 0; if th_e <= th_s, th_e = th_e + 2*pi; end
+segmenti{1} = {a_i, e_i, i_i, OM_i, om_i, th_s, th_e, 'Fase 1: Approccio', [0.2 0.6 1]};
 
-% Seg 1: Coasting su Orbita Iniziale (da th_i a pericentro th=0)
-th_s = th_i; th_e = 0; if th_e <= th_s; th_e = th_e + 2*pi; end
-segmenti{1} = {a_i, e_i, i_i, OM_i, om_i, th_s, th_e, 'Coasting Iniziale', [0.2 0.6 1]};
+% 2. Manovra di Salita
+segmenti{2} = {a_t1, e_t1, i_i, OM_i, om_i, 0, pi, 'Fase 2: Manovra Salita', [1 0.6 0.1]};
 
-% Seg 2: Trasferimento in Salita (da pericentro iniziale th=0 ad apocentro th=pi)
-segmenti{2} = {a_t1, e_t1, i_i, OM_i, om_i, 0, pi, 'Trasferimento Salita', [1 0.6 0.1]};
+% 3. Coasting su Aux (Parcheggio Pre-Piano)
+th_s = pi; th_e = th_plane_tmp; if th_e <= th_s, th_e = th_e + 2*pi; end
+segmenti{3} = {a_aux, e_aux, i_i, OM_i, om_i, th_s, th_e, 'Fase 3: Parcheggio Pre-Piano', [1 1 0]};
 
-% Seg 3: Coasting su Aux Pre-Piano (da th=pi al nodo di cambio piano th_plane_tmp)
-th_s = pi; th_e = th_plane_tmp; if th_e <= th_s; th_e = th_e + 2*pi; end
-segmenti{3} = {a_aux, e_aux, i_i, OM_i, om_i, th_s, th_e, 'Verso Nodo Cambio Piano', [1 1 0]};
-
-% --- FIX TELETRASPORTO (Usando la tua logica!) ---
-% Il satellite si trova a th_plane_tmp. Ruotando il pericentro da om_tmp a om_f,
-% la sua nuova anomalia vera è semplicemente scalata della differenza tra i due.
+% 4. Allineamento dopo cambio piano
 th_post_plane_new = mod(th_plane_tmp + om_tmp - om_f, 2*pi);
+th_s = th_post_plane_new; th_e = pi; if th_e <= th_s, th_e = th_e + 2*pi; end
+segmenti{4} = {a_aux, e_aux, i_f, OM_f, om_f, th_s, th_e, 'Fase 4: Parcheggio Post-Piano', [0.8 0.2 0.8]};
 
-% Seg 4: Coasting su Aux Post-Piano/Peri (dal nodo al punto di discesa th=pi)
-th_s = th_post_plane_new; 
-th_e = pi; % Arrivo per la bitangente di discesa
-if th_e <= th_s; th_e = th_e + 2*pi; end
-segmenti{4} = {a_aux, e_aux, i_f, OM_f, om_f, th_s, th_e, 'Allineamento Discesa', [0.8 0.2 0.8]};
+% 5. Manovra di Discesa
+segmenti{5} = {a_t2, e_t2, i_f, OM_f, om_f, pi, 2*pi, 'Fase 5: Manovra Discesa', [1 0.3 0.3]};
 
-% Seg 5: Trasferimento in Discesa (da apocentro th=pi a pericentro th=2*pi)
-segmenti{5} = {a_t2, e_t2, i_f, OM_f, om_f, pi, 2*pi, 'Trasferimento Discesa', [1 0.3 0.3]};
-
-% Seg 6: Coasting su Orbita Finale Target (da pericentro th=0 a th_f)
-th_s = 0; th_e = th_f; if th_e <= th_s; th_e = th_e + 2*pi; end
-segmenti{6} = {a_f, e_f, i_f, OM_f, om_f, th_s, th_e, 'Arrivo a Target', [0 1 0]};
+% 6. Arrivo a Target
+th_s = 0; th_e = th_f; if th_e <= th_s, th_e = th_e + 2*pi; end
+segmenti{6} = {a_f, e_f, i_f, OM_f, om_f, th_s, th_e, 'Fase 6: Inserimento Target', [0 1 0]};
 
 % --- 4. CICLO DI ANIMAZIONE ---
 h_sat = plot3(NaN, NaN, NaN, 'ko', 'MarkerFaceColor', 'r', 'MarkerSize', 8, 'DisplayName', 'Satellite');
-step = 100; % Punti per ogni segmento
+
+% Legenda ad alto contrasto
+legend('show', 'Location', 'bestoutside', 'FontSize', 9, 'TextColor', 'w', 'Color', 'k', 'EdgeColor', [0.5 0.5 0.5]);
+
+% === CONTROLLO VELOCITÀ (LA VIA DI MEZZO) ===
+skip_frames = 5; 
 
 for s = 1:length(segmenti)
     seg = segmenti{s};
-    th_v = linspace(seg{6}, seg{7}, step);
+    th_v = linspace(seg{6}, seg{7}, num_punti_curva); 
     
-    % Crea una nuova linea per la traccia di questo segmento (cambio colore)
-    h_trail = plot3(NaN, NaN, NaN, 'Color', seg{9}, 'LineWidth', 2, 'DisplayName', seg{8});
-    t_x = []; t_y = []; t_z = [];
+    h_trail = plot3(NaN, NaN, NaN, 'Color', seg{9}, 'LineWidth', 2, 'HandleVisibility', 'off');
     
-    for k = 1:length(th_v)
+    t_x = NaN(1, num_punti_curva); 
+    t_y = NaN(1, num_punti_curva); 
+    t_z = NaN(1, num_punti_curva);
+    
+    for k = 1:num_punti_curva
+        if ~isvalid(h_sat), return; end 
+        
         r = getPosAnim(seg{1}, seg{2}, seg{3}, seg{4}, seg{5}, th_v(k), mu);
         
-        % Aggiorna satellite
-        set(h_sat, 'XData', r(1), 'YData', r(2), 'ZData', r(3));
+        t_x(k) = r(1); 
+        t_y(k) = r(2); 
+        t_z(k) = r(3);
         
-        % Aggiorna traccia corrente
-        t_x(end+1) = r(1); t_y(end+1) = r(2); t_z(end+1) = r(3);
-        set(h_trail, 'XData', t_x, 'YData', t_y, 'ZData', t_z);
-        
-        drawnow;
-        pause(0.005); % Regola velocità animazione
+        if mod(k, skip_frames) == 0 || k == num_punti_curva
+            set(h_sat, 'XData', r(1), 'YData', r(2), 'ZData', r(3));
+            set(h_trail, 'XData', t_x, 'YData', t_y, 'ZData', t_z);
+            drawnow; 
+            pause(0.001); % Freno a mano per stabilizzare la fluidità
+        end
     end
-    
-    % Marker Manovra alla fine di ogni segmento
-    plot3(t_x(end), t_y(end), t_z(end), 'x', 'MarkerEdgeColor', seg{9}, 'MarkerSize', 10, 'LineWidth', 2, 'HandleVisibility', 'off');
-end
-
-legend('show', 'Location', 'bestoutside', 'FontSize', 9);
-
-% --- FUNZIONI INTERNE PER ANIMAZIONE ---
-function r_ijk = getPosAnim(a, e, i, OM, om, th, mu)
-    r_mag = (a*(1 - e^2)) / (1 + e*cos(th));
-    r_pqw = [r_mag*cos(th); r_mag*sin(th); 0];
-    R3_OM = [cos(OM) -sin(OM) 0; sin(OM) cos(OM) 0; 0 0 1];
-    R1_i  = [1 0 0; 0 cos(i) -sin(i); 0 sin(i) cos(i)];
-    R3_om = [cos(om) -sin(om) 0; sin(om) cos(om) 0; 0 0 1];
-    r_ijk = R3_OM * R1_i * R3_om * r_pqw;
-end
-
-function plotOrbitStaticAnim(a, e, i, OM, om, mu, col, stile, width, nome)
-    th = linspace(0, 2*pi, 200);
-    pts = zeros(3, 200);
-    for j = 1:200
-        r_mag = (a*(1 - e^2)) / (1 + e*cos(th(j)));
-        rpqw = [r_mag*cos(th(j)); r_mag*sin(th(j)); 0];
-        R3OM = [cos(OM) -sin(OM) 0; sin(OM) cos(OM) 0; 0 0 1];
-        R1i  = [1 0 0; 0 cos(i) -sin(i); 0 sin(i) cos(i)];
-        R3om = [cos(om) -sin(om) 0; sin(om) cos(om) 0; 0 0 1];
-        pts(:,j) = R3OM * R1i * R3om * rpqw;
-    end
-    plot3(pts(1,:), pts(2,:), pts(3,:), 'Color', [col 0.4], 'LineStyle', stile, 'LineWidth', width, 'DisplayName', nome);
+    % Marker delle manovre (nascosti dalla legenda)
+    plot3(t_x(k), t_y(k), t_z(k), 'x', 'MarkerEdgeColor', seg{9}, 'MarkerSize', 10, 'LineWidth', 2, 'HandleVisibility', 'off');
 end

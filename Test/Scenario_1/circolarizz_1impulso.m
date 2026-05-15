@@ -302,21 +302,17 @@ legend('show', 'Location', 'bestoutside', 'FontSize', 10);
 hold off;
 
 %% ANIMAZIONE DELLA MANOVRA
-
 % =========================================================================
 % ANIMAZIONE 3D AVANZATA - TRACCIA MULTI-COLORE E ORBITE DI RIFERIMENTO
 % =========================================================================
-
 if ~exist('opzione', 'var')
     error('Esegui prima il Codice 2 per caricare i dati nel Workspace!');
 end
-
 % --- 1. SETUP SCENA ---
-fig_anim = figure('Name', 'Simulazione Dinamica Trasferimento Orbitale', 'Color', 'w', 'Units','normalized','Position',[0.1 0.1 0.8 0.8]);
+fig_anim = figure('Name', 'Simulazione Dinamica Trasferimento Orbitale', 'Units','normalized','Position',[0.1 0.1 0.8 0.8]);
 hold on; grid on; axis equal; view(45, 30);
 xlabel('X [km]'); ylabel('Y [km]'); zlabel('Z [km]');
 title({'Missione Gruppo 23: Animazione Sequenza Manovre', ['Strategia Vincente: ', opzione]}, 'FontSize', 14);
-
 % Terra 3D
 [xE, yE, zE] = sphere(50);
 try
@@ -326,7 +322,6 @@ try
 catch
     surf(xE * 6371, yE * 6371, zE * 6371, 'FaceColor', [0.1 0.4 0.8], 'EdgeColor', 'none');
 end
-
 % --- 2. PLOT ORBITE DI RIFERIMENTO (Tratteggiate) ---
 dth_plot = linspace(0, 2*pi, 300);
 % Orbita Iniziale
@@ -337,19 +332,15 @@ plotOrbitStatic(a_park, e_park, i_i, OM_i, om_i, mu, [0.93 0.69 0.13], '--', 1, 
 plotOrbitStatic(a_park, e_park, i_f, OM_f, om_plane, mu, [0.49 0.18 0.56], '--', 1, 'Rif. Parcheggio Post-Piano');
 % Orbita Finale Target
 plotOrbitStatic(a_f, e_f, i_f, OM_f, om_f, mu, [0.47 0.67 0.19], '--', 1, 'Rif. Finale');
-
 % --- 3. DEFINIZIONE SEGMENTI E COLORI TRACCIA ---
 % Ogni riga: {a, e, i, OM, om, th_start, th_end, nome, colore_traccia}
 segmenti = {};
-
 % Seg 1: Da th_i all'apocentro (Orbita Iniziale)
 th_e = pi; if th_e < th_i; th_e = th_e + 2*pi; end
 segmenti{1} = {a_i, e_i, i_i, OM_i, om_i, th_i, th_e, 'Coasting Iniziale', [0 0.44 0.74]};
-
 % Seg 2: Dal pi al nodo di cambio piano (Orbita Parcheggio 1)
 th_s = pi; th_e = th_plane_tmp; if th_e < th_s; th_e = th_e + 2*pi; end
 segmenti{2} = {a_park, e_park, i_i, OM_i, om_i, th_s, th_e, 'Verso Nodo Cambio Piano', [0.85 0.32 0.1]};
-
 % Seg 3: Dal nodo al punto di inizio discesa (Orbita Parcheggio 2 - Post Piano)
 th_s = th_post_plane_new; 
 if opzione(1) == 'A'
@@ -359,7 +350,6 @@ else
 end
 if th_e < th_s; th_e = th_e + 2*pi; end
 segmenti{3} = {a_park, e_park, i_f, OM_f, om_f, th_s, th_e, 'Allineamento Discesa', [0.49 0.18 0.56]};
-
 % Seg 4: La Manovra Finale (Bitangente o Intersezione)
 if opzione(1) == 'A'
     segmenti{4} = {a_t2, e_t2, i_f, OM_f, om_f, th_bitang, th_bitang+pi, 'Trasferimento Bitangente', [0.63 0.07 0.18]};
@@ -368,15 +358,12 @@ else
     segmenti{4} = {a_park, e_park, i_f, OM_f, om_f, th1_intersez, th1_intersez+0.01, 'Salto Intersezione', [0 0 0]};
     th_fine_manovra = th2_intersez;
 end
-
 % Seg 5: Coasting finale fino a th_f (Orbita Target)
 th_s = th_fine_manovra; th_e = th_f; if th_e < th_s; th_e = th_e + 2*pi; end
 segmenti{5} = {a_f, e_f, i_f, OM_f, om_f, th_s, th_e, 'Arrivo a Target', [0.46 0.67 0.18]};
-
 % --- 4. CICLO DI ANIMAZIONE ---
 h_sat = plot3(NaN, NaN, NaN, 'ko', 'MarkerFaceColor', 'r', 'MarkerSize', 8, 'DisplayName', 'Satellite');
 step = 100; % Punti per ogni segmento
-
 for s = 1:length(segmenti)
     seg = segmenti{s};
     th_v = linspace(seg{6}, seg{7}, step);
@@ -402,29 +389,4 @@ for s = 1:length(segmenti)
     % Marker Manovra
     plot3(t_x(end), t_y(end), t_z(end), 'x', 'MarkerEdgeColor', seg{9}, 'MarkerSize', 10, 'LineWidth', 2, 'HandleVisibility', 'off');
 end
-
 legend('show', 'Location', 'bestoutside', 'FontSize', 9);
-
-% --- FUNZIONI INTERNE ---
-function r_ijk = getPos(a, e, i, OM, om, th, mu)
-    r_mag = (a*(1 - e^2)) / (1 + e*cos(th));
-    r_pqw = [r_mag*cos(th); r_mag*sin(th); 0];
-    R3_OM = [cos(OM) -sin(OM) 0; sin(OM) cos(OM) 0; 0 0 1];
-    R1_i  = [1 0 0; 0 cos(i) -sin(i); 0 sin(i) cos(i)];
-    R3_om = [cos(om) -sin(om) 0; sin(om) cos(om) 0; 0 0 1];
-    r_ijk = R3_OM * R1_i * R3_om * r_pqw;
-end
-
-function plotOrbitStatic(a, e, i, OM, om, mu, col, stile, width, nome)
-    th = linspace(0, 2*pi, 200);
-    pts = zeros(3, 200);
-    for j = 1:200
-        r_mag = (a*(1 - e^2)) / (1 + e*cos(th(j)));
-        rpqw = [r_mag*cos(th(j)); r_mag*sin(th(j)); 0];
-        R3OM = [cos(OM) -sin(OM) 0; sin(OM) cos(OM) 0; 0 0 1];
-        R1i  = [1 0 0; 0 cos(i) -sin(i); 0 sin(i) cos(i)];
-        R3om = [cos(om) -sin(om) 0; sin(om) cos(om) 0; 0 0 1];
-        pts(:,j) = R3OM * R1i * R3om * rpqw;
-    end
-    plot3(pts(1,:), pts(2,:), pts(3,:), 'Color', [col 0.4], 'LineStyle', stile, 'LineWidth', width, 'DisplayName', nome);
-end
