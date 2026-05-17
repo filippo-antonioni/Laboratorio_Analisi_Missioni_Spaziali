@@ -185,13 +185,14 @@ a_H2 = - mu_ast / v_inf_2^2;
 
 %%% CONTROLLO SEMIASSE MAGGIORE DELL'IPERBOLE %%%
 if a_H2 < 0
-    fprintf('\n[OK] Controllo superato: L''orbita di fuga è un''iperbole (a = %.2f km).\n', a_H2);
+    fprintf('\n[OK] Controllo superato: L''orbita di fuga è un''iperbole (a = %.2e km).\n', a_H2);
 else
     error('ATTENZIONE: I parametri calcolati non corrispondono a un''iperbole!');
 end
 
 % Creazione vettori di scansione
-rvec = linspace(diam_ast/2, r_SOI_ast, 100);
+margine=0.1;
+rvec = linspace(diam_ast/2+margine, r_SOI_ast, 100);
 e_vec = linspace(0, 1, 1000);
 e_vec = e_vec(2:end-1); % Rimuovo 0 (è il caso circolare) e 1 (parabola)
 
@@ -260,7 +261,7 @@ for i = 1:N_r
         
         % --- CHIAMO LA NOSTRA FUNZIONE DI CONTROLLO ---
         % Passiamo il pericentro, l'apocentro, il raggio dell'asteroide, la SOI e 100m di margine
-        [orbita_ok, motivo] = check_feasibility(r_p_k, r_a_k, diam_ast/2, 0.1);
+        [orbita_ok, motivo] = check_feasibility(r_p_k, r_a_k, diam_ast/2, margine);
         
         if orbita_ok
             % Se l'orbita è geometricamente fattibile, calcoliamo la fisica
@@ -278,6 +279,8 @@ for i = 1:N_r
                 orb_ell.r_a(i, j)   = r_a_k;
                 orb_ell.e(i, j)     = e_k;
                 orb_ell.r_p(i, j)   = r_p_k;
+                orb_ell.a(i,j) = a_k;
+                orb_ell.e_h(i,j) = e_h_ell;
                 orb_ell.dv(i, j)    = abs(v_p_k - v_ph_ell);
                 orb_ell.delta(i, j) = -a_H2 * sqrt(e_h_ell^2 - 1);
             else
@@ -365,10 +368,9 @@ fprintf('======================================================\n');
 % =========================================================================
 % --- PLOT GRAFICI DEL DELTA V ---
 % =========================================================================
-
 % 1. Plot DV vs Raggio per orbite circolari
 figure('Name', 'Analisi Costo Orbita Circolare');
-plot(orb_circ.r_ph, orb_circ.dv * 1000, 'b', 'LineWidth', 2);
+plot(orb_circ.r_ph, orb_circ.dv * 1000, '-bo', 'MarkerSize', 4, 'MarkerFaceColor', 'w', 'LineWidth', 1.5);
 grid on;
 title('Costo Cattura in Orbita Circolare');
 xlabel('Raggio dell''orbita [km]');
@@ -389,7 +391,10 @@ figure('Name', 'Analisi Costo a Eccentricità Fissa');
 % Estraggo tutta la colonna corrispondente all'eccentricità ottima
 dv_slice = orb_ell.dv(:, col_ell);
 a_slice  = orb_ell.a(:, col_ell);
-plot(a_slice, dv_slice * 1000, 'r', 'LineWidth', 2);
+
+% Rimuovo eventuali NaN per evitare che il plot si interrompa male
+valid_idx = ~isnan(dv_slice);
+plot(a_slice(valid_idx), dv_slice(valid_idx) * 1000, '-rs', 'MarkerSize', 4, 'MarkerFaceColor', 'w', 'LineWidth', 1.5);
 grid on;
 title(sprintf('Costo Cattura Ellittica a Eccentricità fissa (e = %.4f)', e_ell_opt));
 xlabel('Semiasse Maggiore a [km]');
@@ -399,11 +404,21 @@ ylabel('\DeltaV [m/s]');
 % =========================================================================
 % --- PLOT ORBITE NEL SISTEMA CENTRATO SULL'ASTEROIDE (3D e 2D) ---
 % =========================================================================
-
-% Preparazione vettori angolo
+% Preparazione vettori angolo orbite chiuse
 th_ell = linspace(0, 2*pi, 200);
-th_inf = acos(-1/e_h_best);
-th_hyp = linspace(-th_inf + 0.05, th_inf - 0.05, 200);
+
+% --- FIX IPERBOLE: Calcolo limite visivo intelligente ---
+% Invece di usare un margine fisso, calcolo l'angolo esatto in cui
+% l'iperbole raggiunge una distanza pari a 2 volte la SOI dell'asteroide.
+r_limite_plot = r_SOI_ast * 2; 
+arg_cos = (a_H2 * (1 - e_h_best^2) / r_limite_plot - 1) / e_h_best;
+
+% Sicurezza numerica (evita che errori di macchina portino l'argomento fuori da [-1, 1])
+arg_cos = max(-1, min(1, arg_cos)); 
+th_limite = acos(arg_cos);
+
+% Vettore dell'iperbole limitato rigorosamente all'area visibile
+th_hyp = linspace(-th_limite, th_limite, 300);
 
 % Parametri Iperbole d'arrivo (basata sulla manovra migliore)
 r_hyp_mag = a_H2 * (1 - e_h_best^2) ./ (1 + e_h_best * cos(th_hyp));
