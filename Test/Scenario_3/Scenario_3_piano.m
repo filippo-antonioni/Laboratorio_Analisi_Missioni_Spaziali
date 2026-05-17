@@ -65,17 +65,17 @@ end
 figure('Name', 'Scenario 3: Iperbole di Fuga dalla Terra (3D)');
 hold on; grid on; axis equal; view(3);
 
-% Disegno la Terra con Topomap realistica integrata in MATLAB
+% Disegno la Terra con Topomap 
 R_earth = 6371; 
 [X_E, Y_E, Z_E] = sphere(50);
 load topo; % Carica dataset topografico nativo
 
-% Modificato: aggiunto HandleVisibility off per escluderlo dalla legenda
+
 surf(X_E*R_earth, Y_E*R_earth, Z_E*R_earth, 'CData', topo, ...
     'FaceColor', 'texturemap', 'EdgeColor', 'none', 'HandleVisibility', 'off');
 colormap(topomap1); % Applica la mappa colori terrestre
 
-% Modificato: indicatore pulito per la Terra nella legenda (Dummy Handle)
+
 plot3(NaN, NaN, NaN, 'o', 'Color', 'b', 'MarkerFaceColor', [0.2 0.5 0.8], ...
     'MarkerSize', 8, 'DisplayName', 'Terra');
 
@@ -112,20 +112,20 @@ legend('Location', 'best');
 hold off;
 
 %%% 6. PLOT DEL SISTEMA GEOCENTRICO 2D (Piano Orbitale) %%%
-% Nel piano perifocale z = 0, usiamo equazioni polari per disegnare le curve
+% Nel piano perifocale z = 0, uso equazioni polari per disegnare le curve
 figure('Name', 'Scenario 3: Iperbole di Fuga (2D Piano Orbitale)');
 hold on; grid on; axis equal;
 
-% Terra in 2D con Topomap (Generiamo la sfera ma la guarderemo dall'alto)
+% Terra in 2D con Topomap (sfera vista dall'alto)
 load topo;
 [X_E2, Y_E2, Z_E2] = sphere(50);
 
-% Modificato: aggiunto HandleVisibility off per escluderlo dalla legenda
+
 surf(X_E2*R_earth, Y_E2*R_earth, Z_E2*R_earth, 'CData', topo, ...
     'FaceColor', 'texturemap', 'EdgeColor', 'none', 'HandleVisibility', 'off');
 colormap(topomap1);
 
-% Modificato: indicatore pulito per la Terra nella legenda (Dummy Handle)
+% Indicatore dummy per la legenda 
 plot3(NaN, NaN, NaN, 'o', 'Color', 'b', 'MarkerFaceColor', [0.2 0.5 0.8], ...
     'MarkerSize', 8, 'DisplayName', 'Terra');
 
@@ -140,10 +140,10 @@ r_hyp_mag = a_H1 * (1 - e_H1^2) ./ (1 + e_H1 * cos(th_hyp));
 z_layer_hyp = ones(size(th_hyp)) * R_earth;
 plot3(r_hyp_mag .* cos(th_hyp), r_hyp_mag .* sin(th_hyp), z_layer_hyp, 'r', 'LineWidth', 2, 'DisplayName', 'Iperbole di Fuga');
 
-% C. Marker Manovra 2D (Il pericentro è per definizione a th = 0, sull'asse X positivo)
+% C. Marker Manovra 2D 
 plot3(r_op, 0, R_earth, 'pk', 'MarkerFaceColor', 'y', 'MarkerSize', 12, 'DisplayName', '\DeltaV: Punto di Manovra');
 
-% Forziamo la vista 2D (perfettamente dall'alto)
+% Forzo la vista 2D 
 view(2);
 
 % Formattazione grafico 2D
@@ -199,7 +199,7 @@ e_vec = e_vec(2:end-1); % Rimuovo 0 (è il caso circolare) e 1 (parabola)
 N_r = length(rvec);
 N_e = length(e_vec);
 
-% --- PRE-ALLOCAZIONE MEMORIA (Per velocità e ordine) ---
+
 % Struct per orbite circolari (vettori 1D)
 orb_circ.r_ph  = zeros(1, N_r);
 orb_circ.v     = zeros(1, N_r);
@@ -216,9 +216,7 @@ orb_ell.e_h   = zeros(N_r, N_e);
 orb_ell.delta = zeros(N_r, N_e);
 orb_ell.dv    = zeros(N_r, N_e);
 
-% Disabilitiamo temporaneamente i warning a schermo dentro il loop
-% per evitare che la console esploda con 100.000 messaggi
-fprintf('\nCalcolo sweep parametri in corso...\n');
+
 
 for i = 1:N_r
     r_k = rvec(i);
@@ -259,12 +257,12 @@ for i = 1:N_r
         % Calcolo subito il pericentro
         r_p_k = r_a_k * (1 - e_k) / (1 + e_k);
         
-        % --- CHIAMO LA NOSTRA FUNZIONE DI CONTROLLO ---
-        % Passiamo il pericentro, l'apocentro, il raggio dell'asteroide, la SOI e 100m di margine
+        
+        % check per evitare che orbita mi attraversi l'asteroide
         [orbita_ok, motivo] = check_feasibility(r_p_k, r_a_k, diam_ast/2, margine);
         
         if orbita_ok
-            % Se l'orbita è geometricamente fattibile, calcoliamo la fisica
+            
             r_ph_ell = r_p_k; 
             e_h_ell = 1 - (r_ph_ell / a_H2);
             
@@ -284,20 +282,18 @@ for i = 1:N_r
                 orb_ell.dv(i, j)    = abs(v_p_k - v_ph_ell);
                 orb_ell.delta(i, j) = -a_H2 * sqrt(e_h_ell^2 - 1);
             else
-                % Scarto: Non è un'iperbole
+                
                 orb_ell.dv(i, j) = NaN;
             end
         else
             % Scarto: L'orbita NON ha passato il controllo geometrico (Impatto, Fuga, ecc.)
             orb_ell.dv(i, j) = NaN;
             
-            % Se volessi fare debug per capire quante schiantano, potresti usare disp(motivo), 
-            % ma sconsiglio di scommentarlo altrimenti ti intasa la console.
-            % disp(motivo);
+        
         end
     end
 end
-fprintf('Sweep completato con successo!\n');
+
 
 % =========================================================================
 % --- ESTRAZIONE DEI RISULTATI OTTIMALI ---
@@ -309,7 +305,7 @@ r_circ_opt = orb_circ.r_ph(idx_circ);
 e_h_circ_opt = orb_circ.e_h(idx_circ);
 
 % 2. Ottimo per Orbita Ellittica
-% min(matrice(:)) trova il minimo assoluto in tutta la matrice 2D
+
 [dv_ell_min, idx_ell_linear] = min(orb_ell.dv(:));
 % ind2sub converte l'indice lineare in riga (raggio) e colonna (eccentricità)
 [row_ell, col_ell] = ind2sub(size(orb_ell.dv), idx_ell_linear);
@@ -352,7 +348,7 @@ else
     e_h_best = e_h_circ_opt;
 end
 
-% Calcolo Delta V Totale (presumendo che DeltaV_1 sia nel workspace)
+% Calcolo Delta V Totale 
 if exist('DeltaV_1', 'var')
     DV_tot = DeltaV_1 + DV2_best;
     fprintf('\nDELTA V1 (Partenza Terra) : %.4f km/s\n', DeltaV_1);
@@ -407,7 +403,7 @@ ylabel('\DeltaV [m/s]');
 % Preparazione vettori angolo orbite chiuse
 th_ell = linspace(0, 2*pi, 200);
 
-% --- FIX IPERBOLE: Calcolo limite visivo intelligente ---
+
 % Invece di usare un margine fisso, calcolo l'angolo esatto in cui
 % l'iperbole raggiunge una distanza pari a 2 volte la SOI dell'asteroide.
 r_limite_plot = r_SOI_ast * 2; 
