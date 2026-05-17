@@ -69,9 +69,15 @@ hold on; grid on; axis equal; view(3);
 R_earth = 6371; 
 [X_E, Y_E, Z_E] = sphere(50);
 load topo; % Carica dataset topografico nativo
+
+% Modificato: aggiunto HandleVisibility off per escluderlo dalla legenda
 surf(X_E*R_earth, Y_E*R_earth, Z_E*R_earth, 'CData', topo, ...
-    'FaceColor', 'texturemap', 'EdgeColor', 'none', 'DisplayName', 'Terra');
+    'FaceColor', 'texturemap', 'EdgeColor', 'none', 'HandleVisibility', 'off');
 colormap(topomap1); % Applica la mappa colori terrestre
+
+% Modificato: indicatore pulito per la Terra nella legenda (Dummy Handle)
+plot3(NaN, NaN, NaN, 'o', 'Color', 'b', 'MarkerFaceColor', [0.2 0.5 0.8], ...
+    'MarkerSize', 8, 'DisplayName', 'Terra');
 
 % Definizione vettori anomalie per i plot
 th_ell = linspace(0, 2*pi, 200);
@@ -96,16 +102,14 @@ plot3(r_hyp_plot(1,:), r_hyp_plot(2,:), r_hyp_plot(3,:), 'r', 'LineWidth', 2, 'D
 [r_manovra, ~] = par2car(a_op, e_op, i_op, OM_op, om_op, 0, mu_earth);
 plot3(r_manovra(1), r_manovra(2), r_manovra(3), 'pk', 'MarkerFaceColor', 'y', 'MarkerSize', 12, 'DisplayName', '\DeltaV: Punto di Manovra');
 
-% Riscalamento assi in base alle dimensioni dell'orbita di parcheggio
+% Riscalamento assi in base alle dimensions dell'orbita di parcheggio
 r_ap_op = a_op * (1 + e_op); % Raggio di apocentro
 lim_zoom = r_ap_op * 2;      % Finestra ampia il doppio dell'apocentro
 xlim([-lim_zoom lim_zoom]); ylim([-lim_zoom lim_zoom]); zlim([-lim_zoom lim_zoom]);
-
 xlabel('X [km]'); ylabel('Y [km]'); zlabel('Z [km]');
 title('Iniezione su Iperbole di Fuga Geocentrica (Vista 3D)');
 legend('Location', 'best');
 hold off;
-
 
 %%% 6. PLOT DEL SISTEMA GEOCENTRICO 2D (Piano Orbitale) %%%
 % Nel piano perifocale z = 0, usiamo equazioni polari per disegnare le curve
@@ -115,9 +119,15 @@ hold on; grid on; axis equal;
 % Terra in 2D con Topomap (Generiamo la sfera ma la guarderemo dall'alto)
 load topo;
 [X_E2, Y_E2, Z_E2] = sphere(50);
+
+% Modificato: aggiunto HandleVisibility off per escluderlo dalla legenda
 surf(X_E2*R_earth, Y_E2*R_earth, Z_E2*R_earth, 'CData', topo, ...
-    'FaceColor', 'texturemap', 'EdgeColor', 'none', 'DisplayName', 'Terra');
+    'FaceColor', 'texturemap', 'EdgeColor', 'none', 'HandleVisibility', 'off');
 colormap(topomap1);
+
+% Modificato: indicatore pulito per la Terra nella legenda (Dummy Handle)
+plot3(NaN, NaN, NaN, 'o', 'Color', 'b', 'MarkerFaceColor', [0.2 0.5 0.8], ...
+    'MarkerSize', 8, 'DisplayName', 'Terra');
 
 % A. Orbita di Parcheggio 2D
 r_op_mag = a_op * (1 - e_op^2) ./ (1 + e_op * cos(th_ell));
@@ -142,7 +152,6 @@ xlabel('Asse Pericentrale P [km]'); ylabel('Asse Trasverso Q [km]');
 title('Vista 2D sul Piano Orbitale (Sistema Perifocale)');
 legend('Location', 'best');
 hold off;
-
 
 %% SECTION 2 - Eliocentrica -> Asteroide
 
@@ -171,7 +180,7 @@ v_inf_2 = norm(v_inf_2_vec);
 
 %%% CARATTERIZZAZIONE IPERBOLE DI ARRIVO %%%
 G = 6.67430e-11; % [m^3 / (kg * s^2)] % Costante di gravitazione universale
-mu_ast = G * m_ast / (1e9);
+mu_ast = G * m_ast / (1e9); % diviso per 1e9 per portare in km^3
 a_H2 = - mu_ast / v_inf_2^2;
 
 %%% CONTROLLO SEMIASSE MAGGIORE DELL'IPERBOLE %%%
