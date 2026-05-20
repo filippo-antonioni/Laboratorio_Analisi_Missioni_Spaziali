@@ -153,6 +153,18 @@ title('Vista 2D sul Piano Orbitale (Sistema Perifocale)');
 legend('Location', 'best');
 hold off;
 
+cos_th_SOI_1 = (a_H1 * (1 - e_H1^2) / r_SOI_terra - 1) / e_H1;
+cos_th_SOI_1 = max(-1, min(1, cos_th_SOI_1)); 
+
+% Calcolo Anomalia Iperbolica (H) alla SOI
+H_1 = acosh((e_H1 + cos_th_SOI_1) / (1 + e_H1 * cos_th_SOI_1));
+
+% Calcolo del tempo di volo con l'equazione di Keplero Iperbolica
+TOF_fuga_sec = sqrt((-a_H1)^3 / mu_earth) * (e_H1 * sinh(H_1) - H_1);
+TOF_fuga_giorni = TOF_fuga_sec / (24 * 3600);
+
+fprintf('TOF Fuga dalla Terra (da Pericentro a SOI): %.2f giorni (%.0f sec)\n', TOF_fuga_giorni, TOF_fuga_sec);
+
 %% SECTION 2 - Eliocentrica -> Asteroide
 
 % Load dati orbita dell'asteroide 363505 (2003 UC20)
@@ -468,3 +480,47 @@ xlabel('Asse Pericentrale P [km]'); ylabel('Asse Trasverso Q [km]');
 title('Vista 2D Piano Orbitale Asteroide');
 legend('Location', 'best');
 hold off;
+
+%% TOF PER IPERBOLE DI ARRIVO
+
+% Calcolo dall'ingresso nella SOI (th = -th_SOI) fino al pericentro (th = 0)
+cos_th_SOI_2 = (a_H2 * (1 - e_h_best^2) / r_SOI_ast - 1) / e_h_best;
+cos_th_SOI_2 = max(-1, min(1, cos_th_SOI_2));
+
+% Calcolo Anomalia Iperbolica (H) alla SOI dell'asteroide
+H_2 = acosh((e_h_best + cos_th_SOI_2) / (1 + e_h_best * cos_th_SOI_2));
+
+% Calcolo del tempo di volo 
+TOF_arrivo_sec = sqrt((-a_H2)^3 / mu_ast) * (e_h_best * sinh(H_2) - H_2);
+TOF_arrivo_giorni = TOF_arrivo_sec / (24 * 3600);
+
+fprintf('TOF Arrivo su Asteroide (da SOI a Pericentro): %.2f giorni (%.0f sec)\n', TOF_arrivo_giorni, TOF_arrivo_sec);
+
+%% TEMPO DELLA MANOVRA CIRCOLARE(NON OTTIMALE)
+
+fprintf('\n--- CONFRONTO TEMPI DI VOLO (STRATEGIA SCARTATA) ---\n');
+
+% Identifichiamo quale strategia ha perso per usare la sua eccentricità iperbolica
+if dv_ell_min < dv_circ_min
+    % Ha vinto l'ellittica, quindi analizziamo la perdente: CIRCOLARE
+    e_h_loser = e_h_circ_opt;
+    nome_loser = 'CIRCOLARE';
+else
+    % Ha vinto la circolare, quindi analizziamo la perdente: ELLITTICA
+    e_h_loser = e_h_ell_opt;
+    nome_loser = 'ELLITTICA';
+end
+
+% Calcolo dall'ingresso nella SOI (th = -th_SOI) fino al pericentro (th = 0)
+cos_th_SOI_loser = (a_H2 * (1 - e_h_loser^2) / r_SOI_ast - 1) / e_h_loser;
+cos_th_SOI_loser = max(-1, min(1, cos_th_SOI_loser)); % Sicurezza numerica
+
+% Calcolo Anomalia Iperbolica (H) per l'orbita scartata
+H_loser = acosh((e_h_loser + cos_th_SOI_loser) / (1 + e_h_loser * cos_th_SOI_loser));
+
+% Calcolo del tempo di volo per l'orbita scartata
+TOF_loser_sec = sqrt((-a_H2)^3 / mu_ast) * (e_h_loser * sinh(H_loser) - H_loser);
+TOF_loser_giorni = TOF_loser_sec / (24 * 3600);
+
+fprintf('TOF Arrivo su Asteroide per orbita %s (Scartata): %.2f giorni (%.0f sec)\n', nome_loser, TOF_loser_giorni, TOF_loser_sec);
+fprintf('======================================================\n');

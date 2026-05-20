@@ -374,3 +374,73 @@ if ~isempty(best_history_fmincon)
         ylim([min(dv_fmincon)-margine, max(dv_fmincon)+margine]);
     end
 end
+
+% =========================================================================
+% --- 6. CALCOLO TEMPO DI VOLO (TOF) DEL TRASFERIMENTO OTTIMO ---
+% =========================================================================
+% Recuperiamo le variabili ottimali trovate dalla statistica globale
+opt_th1 = best_x_global(1);
+opt_th2 = best_x_global(2);
+opt_omT = best_x_global(3);
+
+% Dati Terra e Sole (necessari per ricalcolare il raggio r1)
+a_T = 1.4946e8; e_T = 0.016; i_T = 9.1920e-5; OM_T = 2.7847; om_T = 5.2643;
+mu_sun = 1.32712440018e11;
+
+% 1. Ricalcolo Raggi Vettore
+[r1_opt, ~] = par2car(a_T, e_T, i_T, OM_T, om_T, opt_th1, mu_sun);
+[r2_opt, ~] = par2car(ast.a, ast.e, ast.i, ast.OM, ast.om, opt_th2, mu_sun);
+
+% 2. Geometria del piano di trasferimento (i, OM)
+h_vec = cross(r1_opt, r2_opt);
+h_vers = h_vec / norm(h_vec);
+i_trasf = acos(h_vers(3));
+
+N_vec = cross([0; 0; 1]', h_vers')'; 
+if norm(N_vec) < 1e-6
+    OM_transf = 0;
+else
+    N_vers = N_vec / norm(N_vec);
+    if N_vers(2) >= 0
+        OM_transf = acos(N_vers(1));
+    else
+        OM_transf = 2*pi - acos(N_vers(1));
+    end
+end
+
+% 3. Matrice di rotazione per il piano perifocale
+R_OM = [ cos(OM_transf),  sin(OM_transf), 0;
+        -sin(OM_transf),  cos(OM_transf), 0;
+               0,               0,        1];
+R_i =  [1,        0,               0;
+        0,  cos(i_trasf),  sin(i_trasf);
+        0, -sin(i_trasf),  cos(i_trasf)];
+R_om = [ cos(opt_omT),  sin(opt_omT), 0;
+        -sin(opt_omT),  cos(opt_omT), 0;
+               0,         0,  1];
+
+T_Elio_PF = R_om * R_i * R_OM;
+r1_PF = T_Elio_PF * r1_opt;
+r2_PF = T_Elio_PF * r2_opt;
+
+% 4. Anomalie vere sull'orbita di trasferimento
+th1_T_opt = atan2(r1_PF(2), r1_PF(1));
+th2_T_opt = atan2(r2_PF(2), r2_PF(1));
+
+% 5. Eccentricità e Semiasse dell'orbita di trasferimento
+norm_r1 = norm(r1_opt);
+norm_r2 = norm(r2_opt);
+den_e = norm_r1 * cos(th1_T_opt) - norm_r2 * cos(th2_T_opt);
+e_T_opt = (norm_r2 - norm_r1) / den_e;
+p_T_opt = norm_r1 * (1 + e_T_opt * cos(th1_T_opt));
+a_T_opt = p_T_opt / (1 - e_T_opt^2);
+
+% 6. CHIAMATA ALLA TUA FUNZIONE TOF
+TOF_sec = TOF(a_T_opt, e_T_opt, th1_T_opt, th2_T_opt, mu_sun);
+TOF_giorni = TOF_sec / (24 * 3600);
+
+fprintf('\n===================================================\n');
+fprintf('           TEMPO DI VOLO TRASFERIMENTO             \n');
+fprintf('===================================================\n');
+fprintf('Tempo di Volo (TOF): %.2f giorni (%.2f anni)\n', TOF_giorni, TOF_giorni/365.25);
+fprintf('===================================================\n\n');
