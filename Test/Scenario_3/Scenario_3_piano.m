@@ -203,7 +203,7 @@ else
 end
 
 % Creazione vettori di scansione
-margine=0.1;
+margine=0.4 % da decidere quanto mettere, se il dv non cambia drasticamente mettere un pò più alto 
 rvec = linspace(diam_ast/2+margine, r_SOI_ast, 100);
 e_vec = linspace(0, 1, 1000);
 e_vec = e_vec(2:end-1); % Rimuovo 0 (è il caso circolare) e 1 (parabola)
