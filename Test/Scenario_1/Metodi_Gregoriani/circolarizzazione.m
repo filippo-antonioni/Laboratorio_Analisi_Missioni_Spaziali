@@ -175,7 +175,7 @@ ax = axes;
 set(ax, 'Color','k', 'XColor','w', 'YColor','w', 'ZColor','w');
 hold on; grid on; axis equal; view(35, 25);
 xlabel('X [km]'); ylabel('Y [km]'); zlabel('Z [km]');
-title('Sequenza di Manovre e Nodi (Orbita Ausiliaria Circolare)','Color','w','FontSize',14);
+title('Sequenza di Manovre e Nodi (Orbita Ausiliaria Circolare)','FontSize',14);
 
 % Terra con Mappa Topografica 
 load topo; 
