@@ -226,7 +226,52 @@ plot3(P5(1), P5(2), P5(3), 'wo', 'MarkerFaceColor', 'c', 'MarkerSize', 7, 'Displ
 legend('show','Location','eastoutside','TextColor','w','Color','k','FontSize',11);
 hold off;
 
+% =========================================================================
+% DA INCOLLARE ALLA FINE - RICERCA MINIMO LOCALE CON FMINBND (CORRETTO)
+% =========================================================================
 
+% 1. Definizione dei parametri geometrici
+r1 = r_p_i;
+r2 = r_p_f;
+
+% Calcolo dell'angolo di cambio piano effettivo (alpha)
+cos_alpha = cos(i_i)*cos(i_f) + sin(i_i)*sin(i_f)*cos(OM_f - OM_i);
+alpha = acos(max(-1, min(1, cos_alpha))); 
+
+% 2. Definizione della funzione di costo CON I VALORI ASSOLUTI (Cruciale!)
+dv_fun = @(x) ...
+    abs(sqrt(2*mu/r1 - 2*mu./(r1+x)) - sqrt(2*mu/r1 - mu/a_i)) ... % M1: Salita
+  + abs(sqrt(mu./x) - sqrt(2*mu./x - 2*mu./(r1+x))) ...            % M2: Parcheggio 1
+  + abs(2 * sqrt(mu./x) * sin(alpha/2)) ...                        % M3: Cambio piano
+  + abs(sqrt(mu./x) - sqrt(2*mu./x - 2*mu./(r2+x))) ...            % M4: Inizio discesa
+  + abs(sqrt(2*mu/r2 - 2*mu./(r2+x)) - sqrt(2*mu/r2 - mu/a_f));    % M5: Arrivo
+
+% 3. Esecuzione fminbnd con confini stretti
+% Cerchiamo solo nella prima porzione, prima della discesa asintotica
+limite_inf = a_aux_min;
+limite_sup = 100000; 
+
+% Opzioni silenziose (Display = off per non stampare a schermo)
+opzioni = optimset('Display', 'off', 'TolX', 1e-8);
+
+[a_aux_ottimo, dv_minimo_analitico] = fminbnd(dv_fun, limite_inf, limite_sup, opzioni);
+
+fprintf('\n========================================================\n');
+fprintf('  OTTIMIZZAZIONE FMINBND (Risultato Analitico)\n');
+fprintf('========================================================\n');
+fprintf('  a_aux locale            : %.4f km\n', a_aux_ottimo);
+fprintf('  DeltaV minimo analitico : %.6f km/s\n', dv_minimo_analitico);
+fprintf('========================================================\n');
+
+% 4. Aggiunta del marker al plot esistente
+fig_dv = findobj('type', 'figure', 'Name', 'Analisi DeltaV');
+if ~isempty(fig_dv)
+    figure(fig_dv); hold on;
+    plot(a_aux_ottimo, dv_minimo_analitico, 'p', 'MarkerSize', 14, ...
+        'MarkerEdgeColor', 'k', 'MarkerFaceColor', 'g', 'LineWidth', 1.5, ...
+        'DisplayName', 'Minimo Locale (Esatto)');
+    legend('Location', 'best');
+end
 %% =========================================================================
 % 4. ANIMAZIONE 3D AVANZATA - TRACCIA MULTI-COLORE E ORBITE DI RIFERIMENTO
 % =========================================================================
@@ -324,3 +369,4 @@ for s = 1:length(segmenti)
     % Marker delle manovre (nascosti dalla legenda)
     plot3(t_x(k), t_y(k), t_z(k), 'x', 'MarkerEdgeColor', seg{9}, 'MarkerSize', 10, 'LineWidth', 2, 'HandleVisibility', 'off');
 end
+
