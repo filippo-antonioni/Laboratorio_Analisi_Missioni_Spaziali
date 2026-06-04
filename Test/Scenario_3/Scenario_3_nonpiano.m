@@ -144,7 +144,8 @@ end
 % Trovo il minimo 
 [dv_opt_1, idx_opt] = min(dv_1_vec);
 
-%% --- RECUPERO PARAMETRI OTTIMI PER I PLOT ---
+
+% --- RECUPERO PARAMETRI OTTIMI PER I PLOT ---
 e_H_opt = e_h_vec(idx_opt);
 th_H_opt = th_h_vec(idx_opt);
 th_inf_opt = th_inf_vec(idx_opt);
@@ -249,6 +250,38 @@ TOF_fuga_sec = sqrt((-a_h)^3 / mu_earth) * (e_H_opt * sinh(H_1) - H_1);
 TOF_fuga_giorni = TOF_fuga_sec / (24 * 3600);
 fprintf('\nTOF Fuga dalla Terra (da Manovra a SOI): %.2f giorni (%.0f sec)\n', TOF_fuga_giorni, TOF_fuga_sec);
 
+%%% ESTRAZIONE DATI PER TABELLA FUGA 3D %%%
+% 1. Anomalia vera ottima sull'orbita di parcheggio
+th_park_opt = th_h_op_vec(idx_opt);
+
+% 2. Calcolo tempo di attesa t1 (da th_op a th_park_opt sull'ellisse)
+E_op_start = 2 * atan(sqrt((1-e_op)/(1+e_op)) * tan(th_op/2));
+if E_op_start < 0, E_op_start = E_op_start + 2*pi; end
+M_start = E_op_start - e_op*sin(E_op_start);
+
+E_op_man = 2 * atan(sqrt((1-e_op)/(1+e_op)) * tan(th_park_opt/2));
+if E_op_man < 0, E_op_man = E_op_man + 2*pi; end
+M_man = E_op_man - e_op*sin(E_op_man);
+
+delta_M = M_man - M_start;
+if delta_M < 0, delta_M = delta_M + 2*pi; end
+t_wait_sec = sqrt(a_op^3/mu_earth) * delta_M;
+if abs(th_op - th_park_opt) < 1e-6, t_wait_sec = 0; end
+
+% 3. Anomalia vera alla SOI sull'iperbole
+th_SOI_1 = acos(cos_th_SOI_1);
+
+% 4. Stampa a schermo formattata per la compilazione
+fprintf('\n--- DATI PER TABELLA FUGA 3D ---\n');
+fprintf('t0 (Inizio)      : 0 s\n');
+fprintf('Parking Orbit    : a = %.4f km, e = %.4f, i = %.4f rad, OM = %.4f rad, om = %.4f rad, th = %.4f rad\n', a_op, e_op, i_op, OM_op, om_op, th_op);
+fprintf('t1 (Manovra DV1) : %.2f s\n', t_wait_sec);
+fprintf('Parking (Pre-DV1): a = %.4f km, e = %.4f, i = %.4f rad, OM = %.4f rad, om = %.4f rad, th = %.4f rad\n', a_op, e_op, i_op, OM_op, om_op, th_park_opt);
+fprintf('Iperbole (Post)  : a = %.4f km, e = %.4f, i = %.4f rad, OM = %.4f rad, om = %.4f rad, th = %.4f rad\n', a_h, e_H_opt, i_H_opt, OM_H_opt, om_H_opt, th_H_opt);
+fprintf('Delta V1         : %.4f km/s\n', dv_opt_1);
+fprintf('tf (Arrivo SOI)  : %.2f s\n', t_wait_sec + TOF_fuga_sec);
+fprintf('Iperbole (SOI)   : a = %.4f km, e = %.4f, i = %.4f rad, OM = %.4f rad, om = %.4f rad, th = %.4f rad\n', a_h, e_H_opt, i_H_opt, OM_H_opt, om_H_opt, th_SOI_1);
+fprintf('--------------------------------\n');
 
 %% SECTION 2 - Eliocentrica -> Asteroide
 % Load dati orbita dell'asteroide 363505 (2003 UC20)
@@ -548,3 +581,29 @@ TOF_loser_sec = sqrt((-a_H2)^3 / mu_ast) * (e_h_loser * sinh(H_loser) - H_loser)
 TOF_loser_giorni = TOF_loser_sec / (24 * 3600);
 fprintf('TOF Arrivo su Asteroide per orbita %s (Scartata): %.2f giorni (%.0f sec)\n', nome_loser, TOF_loser_giorni, TOF_loser_sec);
 fprintf('======================================================\n');
+
+%%% ESTRAZIONE DATI PER TABELLA CATTURA CIRCOLARE %%%
+% L'ingresso nella SOI avviene con anomalia vera negativa rispetto al pericentro
+th_SOI_2_circ = -acos(cos_th_SOI_2); 
+
+fprintf('\n--- DATI PER TABELLA CATTURA CIRCOLARE ---\n');
+fprintf('t0 (Ingresso SOI): 0 s\n');
+fprintf('Iperbole (SOI)   : a = %.4f km, e = %.4f, i = %.4f rad, OM = %.4f rad, om = %.4f rad, th = %.4f rad\n', a_H2, e_h_circ_opt, i_A, OM_A, om_A, th_SOI_2_circ);
+fprintf('t1 (Manovra DV2) : %.2f s\n', TOF_arrivo_sec);
+fprintf('Iperbole (Pre)   : a = %.4f km, e = %.4f, i = %.4f rad, OM = %.4f rad, om = %.4f rad, th = 0 rad\n', a_H2, e_h_circ_opt, i_A, OM_A, om_A);
+fprintf('Circolare (Post) : a = %.4f km, e = 0.0000, i = %.4f rad, OM = %.4f rad, om = %.4f rad, th = 0 rad\n', r_circ_opt, i_A, OM_A, om_A);
+fprintf('Delta V2         : %.4f km/s\n', dv_circ_min);
+fprintf('-----------------------------------------\n');
+
+%%% ESTRAZIONE DATI PER TABELLA CATTURA ELLITTICA %%%
+% L'ingresso nella SOI avviene con anomalia vera negativa rispetto al pericentro
+th_SOI_2_ell = -acos(cos_th_SOI_2); 
+
+fprintf('\n--- DATI PER TABELLA CATTURA ELLITTICA ---\n');
+fprintf('t0 (Ingresso SOI): 0 s\n');
+fprintf('Iperbole (SOI)   : a = %.4f km, e = %.4f, i = %.4f rad, OM = %.4f rad, om = %.4f rad, th = %.4f rad\n', a_H2, e_h_ell_opt, i_A, OM_A, om_A, th_SOI_2_ell);
+fprintf('t1 (Manovra DV2) : %.2f s\n', TOF_arrivo_sec);
+fprintf('Iperbole (Pre)   : a = %.4f km, e = %.4f, i = %.4f rad, OM = %.4f rad, om = %.4f rad, th = 0 rad\n', a_H2, e_h_ell_opt, i_A, OM_A, om_A);
+fprintf('Ellittica (Post) : a = %.4f km, e = %.4f, i = %.4f rad, OM = %.4f rad, om = %.4f rad, th = 0 rad\n', a_ell_opt, e_ell_opt, i_A, OM_A, om_A);
+fprintf('Delta V2         : %.4f km/s\n', dv_ell_min);
+fprintf('-----------------------------------------\n');
