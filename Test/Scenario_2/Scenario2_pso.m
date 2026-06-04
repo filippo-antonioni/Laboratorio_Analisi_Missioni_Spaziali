@@ -191,6 +191,73 @@ fprintf('Theta_2 Arrivo:          %.2f deg\n', rad2deg(best_x_global(2)));
 fprintf('Omega_T Trasferimento:   %.2f deg\n', rad2deg(best_x_global(3)));
 
 % =========================================================================
+% SALVATAGGIO E STAMPA PARAMETRI TRASFERIMENTO OTTIMO (i, OM, e)
+% =========================================================================
+% Recupero variabili ottime globali estratte dall'algoritmo
+opt_th1 = best_x_global(1);
+opt_th2 = best_x_global(2);
+opt_omT = best_x_global(3);
+
+% Costanti (Sole e parametri Terra per il ricalcolo)
+mu_sun_tmp = 1.32712440018e11;
+a_T_tmp  = 1.4946e8; 
+e_T_tmp  = 0.016; 
+i_T_tmp  = 9.1920e-5; 
+OM_T_tmp = 2.7847; 
+om_T_tmp = 5.2643;
+
+% 1. Ricalcolo Raggi Vettore alla partenza e all'arrivo
+[r1_opt, ~] = par2car(a_T_tmp, e_T_tmp, i_T_tmp, OM_T_tmp, om_T_tmp, opt_th1, mu_sun_tmp);
+[r2_opt, ~] = par2car(ast.a, ast.e, ast.i, ast.OM, ast.om, opt_th2, mu_sun_tmp);
+
+% 2. Inclinazione (i_trasf_opt) e RAAN (OM_transf_opt)
+h_vec_opt = cross(r1_opt, r2_opt);
+h_vers_opt = h_vec_opt / norm(h_vec_opt);
+i_trasf_opt = acos(h_vers_opt(3));
+
+N_vec_opt = cross([0; 0; 1]', h_vers_opt')'; 
+if norm(N_vec_opt) < 1e-6
+    OM_transf_opt = 0;
+else
+    N_vers_opt = N_vec_opt / norm(N_vec_opt);
+    if N_vers_opt(2) >= 0
+        OM_transf_opt = acos(N_vers_opt(1));
+    else
+        OM_transf_opt = 2*pi - acos(N_vers_opt(1));
+    end
+end
+
+% 3. Eccentricita' (e_trasf_opt)
+R_OM_tmp = [ cos(OM_transf_opt),  sin(OM_transf_opt), 0;
+            -sin(OM_transf_opt),  cos(OM_transf_opt), 0;
+                   0,               0,        1];
+R_i_tmp  = [1,        0,               0;
+            0,  cos(i_trasf_opt),  sin(i_trasf_opt);
+            0, -sin(i_trasf_opt),  cos(i_trasf_opt)];
+R_om_tmp = [ cos(opt_omT),  sin(opt_omT), 0;
+            -sin(opt_omT),  cos(opt_omT), 0;
+                   0,         0,  1];
+
+T_Elio_PF_tmp = R_om_tmp * R_i_tmp * R_OM_tmp;
+r1_PF_tmp = T_Elio_PF_tmp * r1_opt;
+r2_PF_tmp = T_Elio_PF_tmp * r2_opt;
+
+th1_T_opt = atan2(r1_PF_tmp(2), r1_PF_tmp(1));
+th2_T_opt = atan2(r2_PF_tmp(2), r2_PF_tmp(1));
+
+norm_r1 = norm(r1_opt);
+norm_r2 = norm(r2_opt);
+den_e_tmp = norm_r1 * cos(th1_T_opt) - norm_r2 * cos(th2_T_opt);
+e_trasf_opt = (norm_r2 - norm_r1) / den_e_tmp;
+
+% Stampa finale
+fprintf('---------------------------------------------------\n');
+fprintf('PARAMETRI ORBITA DI TRASFERIMENTO OTTIMA:\n');
+fprintf('Inclinazione (i):        %.4f rad (%.2f deg)\n', i_trasf_opt, rad2deg(i_trasf_opt));
+fprintf('RAAN (OM):               %.4f rad (%.2f deg)\n', OM_transf_opt, rad2deg(OM_transf_opt));
+fprintf('Eccentricita (e):        %.4f\n', e_trasf_opt);
+fprintf('===================================================\n');
+% =========================================================================
 % PLOTTING STATISTICO
 % =========================================================================
 
