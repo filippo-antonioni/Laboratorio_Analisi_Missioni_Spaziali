@@ -165,6 +165,32 @@ TOF_fuga_giorni = TOF_fuga_sec / (24 * 3600);
 
 fprintf('TOF Fuga dalla Terra (da Pericentro a SOI): %.2f giorni (%.0f sec)\n', TOF_fuga_giorni, TOF_fuga_sec);
 
+%%% ESTRAZIONE DATI PER TABELLA FUGA 2D %%%
+% 1. Calcolo tempo di attesa da th_op al pericentro (th = 0)
+E_op = 2 * atan(sqrt((1-e_op)/(1+e_op)) * tan(th_op/2));
+if E_op < 0
+    E_op = E_op + 2*pi;
+end
+t_wait_sec = sqrt(a_op^3/mu_earth) * (2*pi - (E_op - e_op*sin(E_op)));
+if abs(th_op) < 1e-6
+    t_wait_sec = 0;
+end
+
+% 2. Anomalia vera alla SOI
+th_SOI_1 = acos(cos_th_SOI_1);
+
+% 3. Stampa a schermo formattata per la compilazione
+fprintf('\n--- DATI PER TABELLA FUGA 2D ---\n');
+fprintf('t0 (Inizio)      : 0 s\n');
+fprintf('Parking Orbit    : a = %.4f km, e = %.4f, i = %.4f rad, OM = %.4f rad, om = %.4f rad, th = %.4f rad\n', a_op, e_op, i_op, OM_op, om_op, th_op);
+fprintf('t1 (Manovra DV1) : %.2f s\n', t_wait_sec);
+fprintf('Parking (Pre-DV1): th = 0 rad\n');
+fprintf('Iperbole (Post)  : a = %.4f km, e = %.4f, i = %.4f rad, OM = %.4f rad, om = %.4f rad, th = 0 rad\n', a_H1, e_H1, i_op, OM_op, om_op);
+fprintf('Delta V1         : %.4f km/s\n', DeltaV_1);
+fprintf('tf (Arrivo SOI)  : %.2f s\n', t_wait_sec + TOF_fuga_sec);
+fprintf('Iperbole (SOI)   : th = %.4f rad\n', th_SOI_1);
+fprintf('--------------------------------\n');
+
 %% SECTION 2 - Eliocentrica -> Asteroide
 
 % Load dati orbita dell'asteroide 363505 (2003 UC20)
