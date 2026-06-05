@@ -418,3 +418,18 @@ if ~isinf(DV_min)
     legend('Location', 'northeast');
     hold off;
 end
+norm_r1 = norm(r1_opt);
+norm_r2 = norm(r2_opt);
+den_e_tmp = norm_r1 * cos(th1_T_opt) - norm_r2 * cos(th2_T_opt);
+e_trasf_opt = (norm_r2 - norm_r1) / den_e_tmp;
+p_T_opt = norm_r1 * (1 + e_trasf_opt * cos(th1_T_opt));
+a_T_opt = p_T_opt / (1 - e_trasf_opt^2);
+% 6. CHIAMATA ALLA TUA FUNZIONE TOF
+TOF_sec = TOF(a_T_opt, e_trasf_opt, th1_T, th2_T_opt, mu_sun);
+TOF_giorni = TOF_sec / (24 * 3600);
+
+fprintf('\n===================================================\n');
+fprintf('           TEMPO DI VOLO TRASFERIMENTO             \n');
+fprintf('===================================================\n');
+fprintf('Tempo di Volo (TOF): %.2f giorni (%.2f anni)\n', TOF_giorni, TOF_giorni/365.25);
+fprintf('===================================================\n\n');
