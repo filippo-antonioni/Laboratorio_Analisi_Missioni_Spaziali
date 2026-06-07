@@ -161,10 +161,10 @@ figure;
 
 plot(a_aux_vec,dv_salita_vec(1,:),a_aux_vec,dv_salita_vec(2,:), ...
     a_aux_vec,dv_discesa_vec(1,:),a_aux_vec,dv_discesa_vec(2,:), ...
-    a_aux_vec,dv_transfer_vec);
+    a_aux_vec,dv_transfer_vec, 'LineWidth',2);
 legend('Salita 1','Salita 2','Discesa 1','Discesa 2','DV trasferimenti');
 grid on;
-title('DeltaV salita e discesa');
+title('DeltaV Traiettorie di Salita e Discesa');
 
 % -------------------------------------------------------------------------
 % 3. PLOT 3D COMPLETO
