@@ -493,6 +493,29 @@ xlabel('Eccentricità [-]');
 ylabel('Semiasse Maggiore a [km]');
 zlabel('\DeltaV [m/s]');
 
+% =========================================================================
+% --- PLOT 2D CONTOUR: CURVE DI LIVELLO ---
+% =========================================================================
+figure('Name', 'Contour Costo Orbita Ellittica');
+
+% Trasformiamo in m/s
+dv_ms = orb_ell.dv * 1000;
+
+min_val = min(dv_ms(:));
+max_val = max(dv_ms(:));
+step = 0.05; 
+livelli = floor(min_val/step)*step : step : ceil(max_val/step)*step;
+[C, h] = contour(orb_ell.e, orb_ell.a, dv_ms, livelli, 'LineColor', 'k', 'LineWidth', 1.2);
+hold on;
+clabel(C, h, livelli, 'FontSize', 9, 'Color', 'k', 'FontWeight', 'bold', 'LabelSpacing', 250);
+grid on;
+set(gca, 'Color', 'w'); 
+title('Curve di Livello: Costo Cattura in Orbita Ellittica');
+xlabel('Eccentricità [-]');
+ylabel('Semiasse Maggiore a [km]');
+
+hold off;
+
 % 3. Plot 2D DV vs Semiasse a parità di Eccentricità Ottima
 figure('Name', 'Analisi Costo a Eccentricità Fissa');
 dv_slice = orb_ell.dv(:, col_ell);
