@@ -548,3 +548,4 @@ TOF_loser_sec = sqrt((-a_H2)^3 / mu_ast) * (e_h_loser * sinh(H_loser) - H_loser)
 TOF_loser_giorni = TOF_loser_sec / (24 * 3600);
 fprintf('TOF Arrivo su Asteroide per orbita %s (Scartata): %.2f giorni (%.0f sec)\n', nome_loser, TOF_loser_giorni, TOF_loser_sec);
 fprintf('======================================================\n');
+
