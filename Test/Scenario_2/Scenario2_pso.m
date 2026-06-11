@@ -24,6 +24,8 @@ e_i = 0.016;
 i_i = 9.1920*1e-5; 
 OM_i = 2.7847; 
 om_i = 5.2643;
+% Costanti (Sole e parametri Terra per il ricalcolo)
+mu_sun = 1.32712440018e11;
 
 % --- Dati dell'asteroide 363505 (2003 UC20) ---
 AU_to_km = 149597870.7; 
@@ -198,17 +200,12 @@ opt_th1 = best_x_global(1);
 opt_th2 = best_x_global(2);
 opt_omT = best_x_global(3);
 
-% Costanti (Sole e parametri Terra per il ricalcolo)
-mu_sun_tmp = 1.32712440018e11;
-a_T_tmp  = 1.4946e8; 
-e_T_tmp  = 0.016; 
-i_T_tmp  = 9.1920e-5; 
-OM_T_tmp = 2.7847; 
-om_T_tmp = 5.2643;
+
+
 
 % 1. Ricalcolo Raggi Vettore alla partenza e all'arrivo
-[r1_opt, ~] = par2car(a_T_tmp, e_T_tmp, i_T_tmp, OM_T_tmp, om_T_tmp, opt_th1, mu_sun_tmp);
-[r2_opt, ~] = par2car(ast.a, ast.e, ast.i, ast.OM, ast.om, opt_th2, mu_sun_tmp);
+[r1_opt, ~] = par2car(a_i, e_i, i_i, om_i, om_i, opt_th1, mu_sun);
+[r2_opt, ~] = par2car(ast.a, ast.e, ast.i, ast.OM, ast.om, opt_th2, mu_sun);
 
 % 2. Inclinazione (i_trasf_opt) e RAAN (OM_transf_opt)
 h_vec_opt = cross(r1_opt, r2_opt);
@@ -361,7 +358,7 @@ if ~isempty(best_history_fmincon)
     xlabel('Iterazioni'); ylabel('\DeltaV Totale [km/s]');
 end
 % 6. CHIAMATA ALLA TUA FUNZIONE TOF
-TOF_sec = TOF(a_T_opt, e_trasf_opt, opt_th1, opt_th2, mu_sun_tmp);
+TOF_sec = TOF(a_T_opt, e_trasf_opt, th1_T_opt, th2_T_opt, mu_sun);
 TOF_giorni = TOF_sec / (24 * 3600);
 
 fprintf('\n===================================================\n');
