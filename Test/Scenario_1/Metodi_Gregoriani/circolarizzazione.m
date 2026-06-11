@@ -122,12 +122,28 @@ a_aux = a_aux_vec(idx_opt);
 e_aux = 0; % Circolare
 dt = dt_total_vec(idx_opt);
 
+% =========================================================================
+% SALVATAGGIO DEI DELTA-V SINGOLI ASSOCIATI AL MINIMO
+% =========================================================================
+dv_salita_1_opt = dv_salita_vec(1, idx_opt);
+dv_salita_2_opt = dv_salita_vec(2, idx_opt);
+dv_plane_opt    = dv_plane_vec(idx_opt);
+dv_discesa_1_opt= dv_discesa_vec(1, idx_opt);
+dv_discesa_2_opt= dv_discesa_vec(2, idx_opt);
+% Se ti serve anche la somma totale dei trasferimenti puri:
+dv_transfer_opt = dv_transfer_vec(idx_opt);
+% =========================================================================
+
 fprintf('\n=== OTTIMIZZAZIONE COMPLETATA ===\n');
 fprintf('  a_aux ottimale = %.4f km\n', a_aux);
 fprintf('  e_aux          = %.6f (Circolare)\n', e_aux);
 fprintf('  DeltaV TOTALE  = %.6f km/s\n', dv_min);
+fprintf('    |-- dV Salita 1    = %.6f km/s\n', dv_salita_1_opt);
+fprintf('    |-- dV Salita 2    = %.6f km/s\n', dv_salita_2_opt);
+fprintf('    |-- dV Cambio Piano    = %.6f km/s\n', dv_plane_opt);
+fprintf('    |-- dV Discesa 1   = %.6f km/s\n', dv_discesa_1_opt);
+fprintf('    |-- dV Discesa 2   = %.6f km/s\n', dv_discesa_2_opt);
 fprintf('  Deltat TOTALE  = %.6f gg\n', dt/86400);
-
 % -------------------------------------------------------------------------
 % PLOT ANDAMENTO DELTA-V
 % -------------------------------------------------------------------------
@@ -161,10 +177,10 @@ figure;
 
 plot(a_aux_vec,dv_salita_vec(1,:),a_aux_vec,dv_salita_vec(2,:), ...
     a_aux_vec,dv_discesa_vec(1,:),a_aux_vec,dv_discesa_vec(2,:), ...
-    a_aux_vec,dv_transfer_vec);
+    a_aux_vec,dv_transfer_vec, 'LineWidth',2);
 legend('Salita 1','Salita 2','Discesa 1','Discesa 2','DV trasferimenti');
 grid on;
-title('DeltaV salita e discesa');
+title('DeltaV Traiettorie di Salita e Discesa');
 
 % -------------------------------------------------------------------------
 % 3. PLOT 3D COMPLETO

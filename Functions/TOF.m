@@ -19,11 +19,10 @@ function deltat=TOF(a,e,th1,th2,mu)
 
 th_vec = [th1 th2]'; 
 
-% 1. Calcolo Anomalia Eccentrica (Il tuo ottimo uso di atan2)
+% 1. Calcolo Anomalia Eccentrica
 sin_E = (sqrt(1-e^2) .* sin(th_vec)) ./ (1 + e .* cos(th_vec));
 cos_E = (e + cos(th_vec)) ./ (1 + e .* cos(th_vec));
 E_vec = atan2(sin_E, cos_E);
-% (Non serve più fare il mod() qui!)
 
 % 2. Calcolo delle Anomalie Medie usando l'Eq. di Keplero (M = E - e*sin(E))
 M_vec = E_vec - e .* sin(E_vec);
@@ -31,9 +30,7 @@ M_vec = E_vec - e .* sin(E_vec);
 % 3. Variazione di Anomalia Media
 delta_M = M_vec(2) - M_vec(1);
 
-% 4. Il "Trucco": Modulo 2*pi sulla differenza
-% Questo sostituisce il tuo IF e aggiunge il periodo T in automatico 
-% se th2 è "prima" di th1 (gestisce i salti di giro)
+% 4. Modulo 2*pi sulla differenza
 delta_M = mod(delta_M, 2*pi);
 
 % 5. Calcolo del tempo di volo finale
