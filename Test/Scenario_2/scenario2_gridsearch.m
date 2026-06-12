@@ -429,3 +429,72 @@ fprintf('           TEMPO DI VOLO TRASFERIMENTO             \n');
 fprintf('===================================================\n');
 fprintf('Tempo di Volo (TOF): %.2f giorni (%.2f anni)\n', TOF_giorni, TOF_giorni/365.25);
 fprintf('===================================================\n\n');
+
+
+%% PLOT ORBITE TERRA E ASTEROIDE
+figure('Name', 'Orbite Terra e Asteroide');
+hold on; grid on; axis equal; view(3);
+
+% --- 1. DATI E COSTANTI ---
+mu_sun  = 1.32712440018e11; % Parametro gravitazionale del Sole [km^3/s^2]
+R_sun   = 696340;           % Raggio del Sole [km]
+AU      = 149597870.7;      % 1 Unità Astronomica [km]
+
+% Dati Terra
+a_E  = 1.4946e8;     
+e_T  = 0.016;        
+i_E  = 9.1920e-5;    
+OM_E = 2.7847;       
+om_E = 5.2643;
+
+% Dati Asteroide 363505 (2003 UC20) 
+a_A  = 0.781241 * AU;       
+e_A  = 0.336932;            
+i_A  = 3.78 * (pi/180);     
+OM_A = 187.92 * (pi/180);   
+om_A = 60.16 * (pi/180);  
+
+% --- 2. DISEGNO DEL SOLE 3D ---
+[xS, yS, zS] = sphere(100);
+R_sun_plot = R_sun * 15; % Ingrandito per essere visibile su scala astronomica
+surf(xS * R_sun_plot, yS * R_sun_plot, zS * R_sun_plot, ...
+    'FaceColor', '#FF8C00', 'EdgeColor', 'none', ...
+    'FaceLighting', 'gouraud', 'AmbientStrength', 0.8, 'HandleVisibility', 'off');
+
+% Salviamo l'handle del marker del Sole per la legenda
+h_sole = plot3(0, 0, 0, 'o', 'MarkerSize', 8, 'MarkerEdgeColor', '#FF8C00', ...
+    'MarkerFaceColor', 'none', 'LineWidth', 1.5);
+
+% --- 3. DISEGNO ORBITE CON LA TUA FUNZIONE ---
+dth = 0.01; % Passo per l'anomalia vera
+
+% Plot Orbita Terra
+plotOrbit(a_E, e_T, i_E, OM_E, om_E, 0, 2*pi, dth, mu_sun);
+lines = findobj(gca, 'Type', 'line');
+h_terra = lines(1); % Salviamo il riferimento alla linea appena creata
+set(h_terra, 'Color', 'b');
+
+% Plot Orbita Asteroide
+plotOrbit(a_A, e_A, i_A, OM_A, om_A, 0, 2*pi, dth, mu_sun);
+lines = findobj(gca, 'Type', 'line');
+h_ast = lines(1); % Salviamo il riferimento alla linea appena creata
+set(h_ast, 'Color', 'r');
+
+% --- FIX LEGENDA: Nascondiamo tutte le superfici extra generate da plotOrbit ---
+surfs = findobj(gca, 'Type', 'surface');
+set(surfs, 'HandleVisibility', 'off');
+
+% --- 4. FORMATTAZIONE ASSI, TITOLO E LEGENDA IN LATEX ---
+set(gca, 'TickLabelInterpreter', 'latex');
+
+xlabel('$X \ [\mathrm{km}]$', 'Interpreter', 'latex', 'FontSize', 12);
+ylabel('$Y \ [\mathrm{km}]$', 'Interpreter', 'latex', 'FontSize', 12);
+zlabel('$Z \ [\mathrm{km}]$', 'Interpreter', 'latex', 'FontSize', 12);
+
+title('\textbf{Orbite Eliocentriche: Terra e Asteroide}', 'Interpreter', 'latex', 'FontSize', 14);
+
+% Creazione della legenda passandogli SOLO i tre oggetti che vogliamo
+leg = legend([h_sole, h_terra, h_ast], {'Sole', 'Orbita Terra', 'Orbita Asteroide'});
+set(leg, 'Interpreter', 'latex', 'Location', 'best', 'FontSize', 11);
+
+hold off;
