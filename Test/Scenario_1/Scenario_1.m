@@ -177,5 +177,60 @@ view(3);
 hold off;
 
 
+%% PLOT ORBITE E POSIZIONI (INIZIALE E FINALE)
+figure('Name', 'Orbite e Posizioni'); 
 
+% Parametri per tracciare le orbite complete (da 0 a 2*pi)
+dth_plot = 0.05;
 
+% 1. Traccio l'orbita iniziale usando la tua funzione plotOrbit
+plotOrbit(a_i, e_i, i_i, OM_i, om_i, 0, 2*pi, dth_plot, mu);
+hold on; % Assicuriamoci che hold sia attivo per i plot successivi
+
+% Recuperiamo l'oggetto linea creato da plotOrbit e lo salviamo in "h_orb_i"
+h_lines = findobj(gca, 'Type', 'line');
+h_orb_i = h_lines(1);
+set(h_orb_i, 'DisplayName', 'Orbita Iniziale', 'Color', [1, 0.5, 0], 'LineWidth', 2); 
+
+% 2. Traccio l'orbita finale e salvo l'oggetto in "h_orb_f"
+th_vec = 0:dth_plot:2*pi;
+rr_f_plot = zeros(3, length(th_vec));
+for k = 1:length(th_vec)
+    [rr_k, ~] = par2car(a_f, e_f, i_f, OM_f, om_f, th_vec(k), mu);
+    rr_f_plot(:, k) = rr_k;
+end
+h_orb_f = plot3(rr_f_plot(1,:), rr_f_plot(2,:), rr_f_plot(3,:), 'g', 'LineWidth', 2, ...
+    'DisplayName', 'Orbita Finale');
+
+% 3. Calcolo le coordinate (X,Y,Z) esatte dei due marker
+[r_pos_i, ~] = par2car(a_i, e_i, i_i, OM_i, om_i, th_i, mu);
+[r_pos_f, ~] = par2car(a_f, e_f, i_f, OM_f, om_f, th_f, mu);
+
+% 4. Plotto i marker sul grafico e li salvo in "h_pos_i" e "h_pos_f"
+h_pos_i = plot3(r_pos_i(1), r_pos_i(2), r_pos_i(3), 'o', 'MarkerSize', 8, ...
+    'MarkerFaceColor', 'r', 'MarkerEdgeColor', 'k', ...
+    'DisplayName', 'Posizione Iniziale ($\theta_i$)');
+    
+h_pos_f = plot3(r_pos_f(1), r_pos_f(2), r_pos_f(3), 's', 'MarkerSize', 11, ...
+    'MarkerFaceColor', 'm', 'MarkerEdgeColor', 'k', ...
+    'DisplayName', 'Posizione Finale ($\theta_f$)');
+
+% 5. Formattazione degli assi con LaTeX
+xlabel('$X$ [km]', 'Interpreter', 'latex', 'FontSize', 12);
+ylabel('$Y$ [km]', 'Interpreter', 'latex', 'FontSize', 12);
+zlabel('$Z$ [km]', 'Interpreter', 'latex', 'FontSize', 12);
+
+set(gca, 'TickLabelInterpreter', 'latex', 'FontSize', 11);
+
+% 6. INSERISCO LA LEGENDA PASSANDO SOLO GLI OGGETTI DESIDERATI
+% In questo modo ignoriamo totalmente la superficie (la Terra)
+legend([h_orb_i, h_orb_f, h_pos_i, h_pos_f], ...
+    'Interpreter', 'latex', 'Location', 'best', 'FontSize', 12);
+
+title('\textbf{Rappresentazione Orbite e Posizioni}', 'Interpreter', 'latex', 'FontSize', 14);
+
+% Imposto la vista 3D e le proporzioni geometriche corrette
+axis equal;
+view(3);
+grid on;
+hold off;
