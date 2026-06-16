@@ -266,29 +266,3 @@ function plotOrbit_Fast(a, e, i, OM, om, mu, th_vec, col, stile, width, nome)
     plot3(pts(1,:), pts(2,:), pts(3,:), 'Color', col, 'LineStyle', stile, ...
           'LineWidth', width, 'DisplayName', ['\textbf{', nome, '}']);
 end
-
-% =========================================================================
-% 6. ESTRAZIONE VALORI ESATTI PER ANIMAZIONE PYTHON (Sequenza A - 'pa')
-% =========================================================================
-fprintf('\n\n======================================================\n');
-fprintf(' COPIA QUESTI VALORI NEL TUO SCRIPT PYTHON SU COLAB\n');
-fprintf('======================================================\n\n');
-
-% Ricalcolo forzato della cinematica per la sequenza ottima A ('pa')
-% Fase 1: Bitangente 'pa'
-th_start_b = 0;
-th_end_b = pi;
-
-% Fase 2: Cambio Piano (orbita dimensioni finali, piano iniziale)
-[~, om_mid, th_node_base] = changeOrbitalPlane(a_f, e_f, i_i, OM_i, om_i, i_f, OM_f, mu);
-th_n1 = mod(th_node_base, 2*pi); 
-th_n2 = mod(th_node_base + pi, 2*pi);
-dt1_1 = TOF(a_f, e_f, th_end_b, th_n1, mu);
-dt1_2 = TOF(a_f, e_f, th_end_b, th_n2, mu);
-if dt1_1 < dt1_2, th_node_Python = th_n1; else, th_node_Python = th_n2; end
-
-% Fase 3: Cambio Pericentro 
-[~, thi_pe, thf_pe] = changePericenterArg(a_f, e_f, om_mid, om_f, mu);
-dt2_1 = TOF(a_f, e_f, th_node_Python, thi_pe(1), mu);
-dt2_2 = TOF(a_f, e_f, th_node_Python, thi_pe(2), mu);
-if dt2_1 < dt2_2, th_pe_start_Python = thi_pe(1); else, th_pe_start_Python = thi_pe(2); end
