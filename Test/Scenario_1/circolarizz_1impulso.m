@@ -39,7 +39,7 @@ e_park = 0;
 [rr_park, vv_park] = par2car(a_park, e_park, i_i, OM_i, om_i, pi, mu);
 costo_circolarizzazione = norm(vv_i_a - vv_park);
 
-% Calcolo deltav del cambio piano
+% Calcolo deltav del cambio pian
 [dV_plane, om_plane, theta_plane] = changeOrbitalPlane(a_park, e_park, i_i, OM_i, om_i, i_f, OM_f, mu);
 costo_piano = abs(dV_plane);
         
