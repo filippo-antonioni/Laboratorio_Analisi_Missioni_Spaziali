@@ -167,14 +167,9 @@ fprintf('TOF Fuga dalla Terra (da Pericentro a SOI): %.2f giorni (%.0f sec)\n', 
 
 %%% ESTRAZIONE DATI PER TABELLA FUGA 2D %%%
 % 1. Calcolo tempo di attesa da th_op al pericentro (th = 0)
-E_op = 2 * atan(sqrt((1-e_op)/(1+e_op)) * tan(th_op/2));
-if E_op < 0
-    E_op = E_op + 2*pi;
-end
-t_wait_sec = sqrt(a_op^3/mu_earth) * (2*pi - (E_op - e_op*sin(E_op)));
-if abs(th_op) < 1e-6
-    t_wait_sec = 0;
-end
+
+t_wait_sec = TOF(a_op,e_op,th_op,0,mu_earth);
+
 
 % 2. Anomalia vera alla SOI
 th_SOI_1 = acos(cos_th_SOI_1);
