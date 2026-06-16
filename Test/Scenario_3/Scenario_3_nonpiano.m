@@ -242,6 +242,10 @@ legend('Location', 'best');
 hold off;
 
 %%% 7. CALCOLO TOF %%%
+
+% Coasting da th dell'orbita di parcheggio GTO a pericentro
+
+
 cos_th_SOI_1 = (a_h * (1 - e_H_opt^2) / r_SOI_terra - 1) / e_H_opt;
 cos_th_SOI_1 = max(-1, min(1, cos_th_SOI_1)); 
 
@@ -252,21 +256,13 @@ fprintf('\nTOF Fuga dalla Terra (da Manovra a SOI): %.2f giorni (%.0f sec)\n', T
 
 %%% ESTRAZIONE DATI PER TABELLA FUGA 3D %%%
 % 1. Anomalia vera ottima sull'orbita di parcheggio
+
 th_park_opt = th_h_op_vec(idx_opt);
 
 % 2. Calcolo tempo di attesa t1 (da th_op a th_park_opt sull'ellisse)
-E_op_start = 2 * atan(sqrt((1-e_op)/(1+e_op)) * tan(th_op/2));
-if E_op_start < 0, E_op_start = E_op_start + 2*pi; end
-M_start = E_op_start - e_op*sin(E_op_start);
 
-E_op_man = 2 * atan(sqrt((1-e_op)/(1+e_op)) * tan(th_park_opt/2));
-if E_op_man < 0, E_op_man = E_op_man + 2*pi; end
-M_man = E_op_man - e_op*sin(E_op_man);
+t_wait_sec = TOF(a_op,e_op,th_op,th_park_opt,mu_earth);
 
-delta_M = M_man - M_start;
-if delta_M < 0, delta_M = delta_M + 2*pi; end
-t_wait_sec = sqrt(a_op^3/mu_earth) * delta_M;
-if abs(th_op - th_park_opt) < 1e-6, t_wait_sec = 0; end
 
 % 3. Anomalia vera alla SOI sull'iperbole
 th_SOI_1 = acos(cos_th_SOI_1);
