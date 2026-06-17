@@ -390,4 +390,3 @@ for s = 1:length(segmenti)
     plot3(t_x(end), t_y(end), t_z(end), 'x', 'MarkerEdgeColor', seg{9}, 'MarkerSize', 10, 'LineWidth', 2, 'HandleVisibility', 'off');
 end
 legend('show', 'Location', 'bestoutside', 'FontSize', 9);
-
