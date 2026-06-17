@@ -66,72 +66,93 @@ for seq = 1:3
         
         switch seq
             case 1 % A: Bitang -> Piano -> Peric
+                % 1. Manovra Bitangente
                 [dV1_b, dV2_b, dt_b] = bitangentTransfer(a_i, e_i, a_f, e_f, tipo_b, mu);
                 dV_b_tot = abs(dV1_b) + abs(dV2_b);
                 
+                % 2. Cambio Piano
                 [dV_pl, om_mid, th_node_base] = changeOrbitalPlane(a_f, e_f, i_i, OM_i, om_i, i_f, OM_f, mu);
                 
-                % [FIX TOF] Scelta del Nodo più vicino
-                th_n1 = mod(th_node_base, 2*pi); th_n2 = mod(th_node_base + pi, 2*pi);
-                dt1_1 = TOF(a_f, e_f, th_end_b, th_n1, mu);
-                dt1_2 = TOF(a_f, e_f, th_end_b, th_n2, mu);
-                if dt1_1 < dt1_2, dt1 = dt1_1; th_node = th_n1; else, dt1 = dt1_2; th_node = th_n2; end
-                
+                % 3. Cambio Pericentro
                 [dV_pe, thi_pe, thf_pe] = changePericenterArg(a_f, e_f, om_mid, om_f, mu);
                 
-                % [FIX TOF] Scelta dell'Anomalia più vicina
-                dt2_1 = TOF(a_f, e_f, th_node, thi_pe(1), mu);
-                dt2_2 = TOF(a_f, e_f, th_node, thi_pe(2), mu);
-                if dt2_1 < dt2_2, dt2 = dt2_1; th_pe_f = thf_pe(1); else, dt2 = dt2_2; th_pe_f = thf_pe(2); end
+                % Calcolo Tempi di Volo in sequenza
+                dt0 = TOF(a_i, e_i, th_i, th_start_b, mu);             % Coasting da pos. iniziale a inizio bitangente
+                dt1 = TOF(a_f, e_f, th_end_b, th_node_base, mu);       % Coasting da fine bitangente a nodo cambio piano
                 
-                dt0 = TOF(a_i, e_i, th_i, th_start_b, mu);           
-                dt3 = TOF(a_f, e_f, th_pe_f, th_f, mu);            
+                % Scelta del punto ottimale per il cambio di pericentro
+                dt2_1 = TOF(a_f, e_f, th_node_base, thi_pe(1), mu);
+                dt2_2 = TOF(a_f, e_f, th_node_base, thi_pe(2), mu);
+                if dt2_1 < dt2_2 
+                    dt2 = dt2_1; 
+                    th_pe_f = thf_pe(1); 
+                else 
+                    dt2 = dt2_2; 
+                    th_pe_f = thf_pe(2); 
+                end
+                
+                dt3 = TOF(a_f, e_f, th_pe_f, th_f, mu);                % Coasting verso pos. finale
+                
                 TOF_tot = dt0 + dt_b + dt1 + dt2 + dt3;
                 
             case 2 % B: Piano -> Bitang -> Peric
+                % 1. Cambio Piano
                 [dV_pl, om_mid, th_node_base] = changeOrbitalPlane(a_i, e_i, i_i, OM_i, om_i, i_f, OM_f, mu);
                 
-                % [FIX TOF] Scelta Nodo
-                th_n1 = mod(th_node_base, 2*pi); th_n2 = mod(th_node_base + pi, 2*pi);
-                dt0_1 = TOF(a_i, e_i, th_i, th_n1, mu);
-                dt0_2 = TOF(a_i, e_i, th_i, th_n2, mu);
-                if dt0_1 < dt0_2, dt0 = dt0_1; th_node = th_n1; else, dt0 = dt0_2; th_node = th_n2; end
-                
+                % 2. Manovra Bitangente
                 [dV1_b, dV2_b, dt_b] = bitangentTransfer(a_i, e_i, a_f, e_f, tipo_b, mu);
                 dV_b_tot = abs(dV1_b) + abs(dV2_b);
                 
+                % 3. Cambio Pericentro
                 [dV_pe, thi_pe, thf_pe] = changePericenterArg(a_f, e_f, om_mid, om_f, mu);
                 
-                % [FIX TOF] Scelta Pericentro
+                % Calcolo Tempi di Volo in sequenza
+                dt0 = TOF(a_i, e_i, th_i, th_node_base, mu);           % Coasting da pos. iniziale al nodo di cambio piano
+                dt1 = TOF(a_i, e_i, th_node_base, th_start_b, mu);     % Coasting dal nodo a inizio bitangente
+                
+                % Scelta del punto ottimale per il cambio di pericentro (si parte da fine bitangente)
                 dt2_1 = TOF(a_f, e_f, th_end_b, thi_pe(1), mu);
                 dt2_2 = TOF(a_f, e_f, th_end_b, thi_pe(2), mu);
-                if dt2_1 < dt2_2, dt2 = dt2_1; th_pe_f = thf_pe(1); else, dt2 = dt2_2; th_pe_f = thf_pe(2); end
+                if dt2_1 < dt2_2 
+                    dt2 = dt2_1; 
+                    th_pe_f = thf_pe(1); 
+                else
+                    dt2 = dt2_2; 
+                    th_pe_f = thf_pe(2); 
+                end
                 
-                dt1 = TOF(a_i, e_i, th_node, th_start_b, mu);        
-                dt3 = TOF(a_f, e_f, th_pe_f, th_f, mu);            
+                dt3 = TOF(a_f, e_f, th_pe_f, th_f, mu);                % Coasting verso pos. finale
+                
                 TOF_tot = dt0 + dt1 + dt_b + dt2 + dt3;
                 
             case 3 % C: Piano -> Pericentro -> Bitangente (STRATEGIA STANDARD)
+                % 1. Cambio Piano
                 [dV_pl, om_mid, th_node_base] = changeOrbitalPlane(a_i, e_i, i_i, OM_i, om_i, i_f, OM_f, mu);
                 
-                % [FIX TOF] Scelta Nodo
-                th_n1 = mod(th_node_base, 2*pi); th_n2 = mod(th_node_base + pi, 2*pi);
-                dt0_1 = TOF(a_i, e_i, th_i, th_n1, mu);
-                dt0_2 = TOF(a_i, e_i, th_i, th_n2, mu);
-                if dt0_1 < dt0_2, dt0 = dt0_1; th_node = th_n1; else, dt0 = dt0_2; th_node = th_n2; end
-                
+                % 2. Cambio Pericentro
                 [dV_pe, thi_pe, thf_pe] = changePericenterArg(a_i, e_i, om_mid, om_f, mu);
                 
-                % [FIX TOF] Scelta Pericentro
-                dt1_1 = TOF(a_i, e_i, th_node, thi_pe(1), mu);
-                dt1_2 = TOF(a_i, e_i, th_node, thi_pe(2), mu);
-                if dt1_1 < dt1_2, dt1 = dt1_1; th_pe_f = thf_pe(1); else, dt1 = dt1_2; th_pe_f = thf_pe(2); end
-                
+                % 3. Manovra Bitangente
                 [dV1_b, dV2_b, dt_b] = bitangentTransfer(a_i, e_i, a_f, e_f, tipo_b, mu);
                 dV_b_tot = abs(dV1_b) + abs(dV2_b);
                 
-                dt2 = TOF(a_i, e_i, th_pe_f, th_start_b, mu);      
-                dt3 = TOF(a_f, e_f, th_end_b, th_f, mu);             
+                % Calcolo Tempi di Volo in sequenza
+                dt0 = TOF(a_i, e_i, th_i, th_node_base, mu);           % Coasting da pos. iniziale al nodo
+                
+                % Scelta del punto ottimale per il cambio di pericentro (si parte dal nodo)
+                dt1_1 = TOF(a_i, e_i, th_node_base, thi_pe(1), mu);
+                dt1_2 = TOF(a_i, e_i, th_node_base, thi_pe(2), mu);
+                if dt1_1 < dt1_2 
+                    dt1 = dt1_1; 
+                    th_pe_f = thf_pe(1); 
+                else 
+                    dt1 = dt1_2; 
+                    th_pe_f = thf_pe(2); 
+                end
+                
+                dt2 = TOF(a_i, e_i, th_pe_f, th_start_b, mu);    % Coasting da pos. post-pericentro a inizio bitangente
+                dt3 = TOF(a_f, e_f, th_end_b, th_f, mu);         % Coasting da fine bitangente verso pos. finale
+                
                 TOF_tot = dt0 + dt1 + dt2 + dt_b + dt3;
         end
         
