@@ -92,12 +92,16 @@ end
     % suo pericentro o apocentro è qualunque punto della circonferenza
     [dv3, th_3_i, th_3_f] = changePericenterArg(a_aux_k, e_aux_k, om_tmp, om_f, mu);
     
+
+    th_periarg=mod(th_plane_tmp + om_tmp - om_f, 2*pi);
     % coasting per raggiungere il punto diametralmente opposto al pericentro finale
-    dt_coast_3 = TOF(a_aux_k, e_aux_k, min(th_3_f), pi, mu);
+    dt_coast_3 = TOF(a_aux_k, e_aux_k, th_periarg, pi, mu);
 
     % Manovra 4: bitangente 'ap' (da apocentro/orbita circolare a pericentro finale)
     [dv4_1, dv4_2, dt_bitang_2] = bitangentTransfer(a_aux_k, e_aux_k, a_f, e_f, 'ap', mu);
     
+    % Coasting finale da fine bitangente a th_f
+    dt_coast_4 = TOF(a_f, e_f, 0, th_f, mu);
 % --- contributi separati ---
 dv_transfer = abs(dv1_1) + abs(dv1_2) + abs(dv4_1) + abs(dv4_2);
 
@@ -113,7 +117,7 @@ dv_discesa_vec(:,k)=[dv4_1;dv4_2];
 % COSTO E TEMPO TOTALE
 dv_total_vec(k) = dv_transfer + dv_plane + abs(dv3);
 
-dt_total_vec(k) = dt_coast_1 + dt_bitang_1 + dt_coast_2 + dt_coast_3 + dt_bitang_2;
+dt_total_vec(k) = dt_coast_1 + dt_bitang_1 + dt_coast_2 + dt_coast_3 + dt_bitang_2 + dt_coast_4;
 end
 
 % Trova il minimo
