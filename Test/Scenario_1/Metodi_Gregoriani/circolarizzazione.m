@@ -214,7 +214,8 @@ a_t1 = (r_p_i + r_a_t1)/2;
 e_t1 = (r_a_t1 - r_p_i)/(r_a_t1 + r_p_i);
 plotOrbit_circolarizzazione(a_t1, e_t1, i_i, OM_i, om_i, 0, pi, dth, mu, [1 0.6 0.1], '-', 2, '2. Trasferimento Salita');
 % 3. Orbita Ausiliaria (pre-piano)
-plotOrbit_circolarizzazione(a_aux, e_aux, i_i, OM_i, om_i, 0, 2*pi, dth, mu, [1 1 0], '--', 1.5, '3. Orbita Aux (Pre-Piano)');
+% Sostituito [1 1 0] (giallo) con [0 0.4 0.6] (ottanio scuro)
+plotOrbit_circolarizzazione(a_aux, e_aux, i_i, OM_i, om_i, 0, 2*pi, dth, mu, [0 0.4 0.6], '--', 1.5, '3. Orbita Aux (Pre-Piano)');
 % 4. Orbita Ausiliaria (post-piano)
 plotOrbit_circolarizzazione(a_aux, e_aux, i_f, OM_f, om_tmp, 0, 2*pi, dth, mu, [0.8 0.2 0.8], '-.', 1.5, '4. Orbita Aux (Post-Piano)');
 % 5. Trasferimento Discesa
@@ -238,11 +239,11 @@ P5 = getPos3D(a_f, e_f, i_f, OM_f, om_f, 0);
 
 % Disegno i Marker
 plot3(P1(1), P1(2), P1(3), 'wo', 'MarkerFaceColor', 'g', 'MarkerSize', 7, 'DisplayName', 'M1: Inizio Salita');
-plot3(P2(1), P2(2), P2(3), 'wo', 'MarkerFaceColor', 'y', 'MarkerSize', 7, 'DisplayName', 'M2: Fine Salita');
+% Sostituito 'y' con il vettore [0 0.4 0.6] per abbinarlo all'orbita
+plot3(P2(1), P2(2), P2(3), 'wo', 'MarkerFaceColor', [0 0.4 0.6], 'MarkerSize', 7, 'DisplayName', 'M2: Fine Salita');
 plot3(P3(1), P3(2), P3(3), 'wo', 'MarkerFaceColor', 'm', 'MarkerSize', 7, 'DisplayName', 'M3: Cambio Piano');
 plot3(P4(1), P4(2), P4(3), 'wo', 'MarkerFaceColor', 'r', 'MarkerSize', 7, 'DisplayName', 'M4: Inizio Discesa');
 plot3(P5(1), P5(2), P5(3), 'wo', 'MarkerFaceColor', 'c', 'MarkerSize', 7, 'DisplayName', 'M5: Arrivo Target');
-
 legend('show','Location','eastoutside','TextColor','w','Color','k','FontSize',11);
 hold off;
 
@@ -295,18 +296,14 @@ end
 %% =========================================================================
 % 4. ANIMAZIONE 3D AVANZATA - TRACCIA MULTI-COLORE E ORBITE DI RIFERIMENTO
 % =========================================================================
-
 % --- 1. SETUP SCENA ---
 fig_anim = figure('Name', 'Simulazione Dinamica Trasferimento Orbitale Circolare', ...
     'Units','normalized','Position',[0.1 0.1 0.8 0.8]);
-
 % Assi scuri ad alto contrasto
 ax = axes;
-set(ax, 'Color','k', 'XColor','w', 'YColor','w', 'ZColor','w');
 hold on; grid on; axis equal; view(35, 25);
 xlabel('X [km]'); ylabel('Y [km]'); zlabel('Z [km]');
 title('Animazione Sequenza Manovre (Orbita Ausiliaria Circolare)', 'Color','w','FontSize', 14);
-
 % Terra 3D
 [xE, yE, zE] = sphere(50);
 try
@@ -318,16 +315,18 @@ catch
     surf(xE * 6371, yE * 6371, zE * 6371, 'FaceColor', [0.1 0.4 0.8], 'EdgeColor', 'none');
 end
 
-% --- 2. PLOT ORBITE DI RIFERIMENTO (Tratteggiate per la legenda) ---
+% --- 2. PLOT ORBITE DI RIFERIMENTO ---
 plotOrbit_circolarizzazioneStaticAnim(a_i, e_i, i_i, OM_i, om_i, mu, [0.2 0.6 1], '--', 1, 'Rif. Iniziale');
-plotOrbit_circolarizzazioneStaticAnim(a_aux, e_aux, i_i, OM_i, om_i, mu, [1 1 0], '--', 1, 'Rif. Parcheggio Pre-Piano');
+% Sostituito [1 1 0] con [0 0.4 0.6] (ottanio)
+plotOrbit_circolarizzazioneStaticAnim(a_aux, e_aux, i_i, OM_i, om_i, mu, [0 0.4 0.6], '--', 1, 'Rif. Parcheggio Pre-Piano');
 plotOrbit_circolarizzazioneStaticAnim(a_aux, e_aux, i_f, OM_f, om_f, mu, [0.8 0.2 0.8], '--', 1, 'Rif. Parcheggio Post-Piano');
-plotOrbit_circolarizzazioneStaticAnim(a_f, e_f, i_f, OM_f, om_f, mu, [0 1 0], '--', 1, 'Rif. Finale Target');
+% Riga modificata: linea continua ('-') e spessore aumentato a 2
+plotOrbit_circolarizzazioneStaticAnim(a_f, e_f, i_f, OM_f, om_f, mu, [0 1 0], '-', 2, 'Rif. Finale Target');
 
 % --- 3. DEFINIZIONE SEGMENTI ---
 num_punti_curva = 500; 
-
 segmenti = {};
+
 % 1. Coasting iniziale verso il pericentro
 th_s = th_i; th_e = 0; if th_e <= th_s, th_e = th_e + 2*pi; end
 segmenti{1} = {a_i, e_i, i_i, OM_i, om_i, th_s, th_e, 'Fase 1: Approccio', [0.2 0.6 1]};
@@ -337,7 +336,8 @@ segmenti{2} = {a_t1, e_t1, i_i, OM_i, om_i, 0, pi, 'Fase 2: Manovra Salita', [1 
 
 % 3. Coasting su Aux (Parcheggio Pre-Piano)
 th_s = pi; th_e = th_plane_tmp; if th_e <= th_s, th_e = th_e + 2*pi; end
-segmenti{3} = {a_aux, e_aux, i_i, OM_i, om_i, th_s, th_e, 'Fase 3: Parcheggio Pre-Piano', [1 1 0]};
+% Sostituito [1 1 0] con [0 0.4 0.6] (ottanio)
+segmenti{3} = {a_aux, e_aux, i_i, OM_i, om_i, th_s, th_e, 'Fase 3: Parcheggio Pre-Piano', [0 0.4 0.6]};
 
 % 4. Allineamento dopo cambio piano
 th_post_plane_new = mod(th_plane_tmp + om_tmp - om_f, 2*pi);
@@ -353,13 +353,11 @@ segmenti{6} = {a_f, e_f, i_f, OM_f, om_f, th_s, th_e, 'Fase 6: Inserimento Targe
 
 % --- 4. CICLO DI ANIMAZIONE ---
 h_sat = plot3(NaN, NaN, NaN, 'ko', 'MarkerFaceColor', 'r', 'MarkerSize', 8, 'DisplayName', 'Satellite');
-
 % Legenda ad alto contrasto
 legend('show', 'Location', 'bestoutside', 'FontSize', 9, 'TextColor', 'w', 'Color', 'k', 'EdgeColor', [0.5 0.5 0.5]);
 
 % === CONTROLLO VELOCITÀ (LA VIA DI MEZZO) ===
 skip_frames = 5; 
-
 for s = 1:length(segmenti)
     seg = segmenti{s};
     th_v = linspace(seg{6}, seg{7}, num_punti_curva); 
