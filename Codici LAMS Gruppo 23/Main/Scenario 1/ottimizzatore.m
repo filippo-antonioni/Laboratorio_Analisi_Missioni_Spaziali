@@ -2,11 +2,7 @@ clear
 close all
 clc
 
-% =========================================================================
-% OTTIMIZZATORE MULTI-OBIETTIVO (dV e TOF Ottimizzato)
-% =========================================================================
-
-% --- 1. CARICAMENTO DATI ---
+% Orbita iniziale
 T = load("DatiSC1-2026.txt");
 mu = 398600;
 
@@ -26,7 +22,6 @@ OM_i = orbita_iv(4);
 om_i = orbita_iv(5);
 th_i = orbita_iv(6);
 
-% --- 2. SETUP DELL'ANALISI OTTIMIZZAZIONE ---
 tipi_bitangente = {'pa', 'ap', 'pp', 'aa'};
 nomi_sequenze = {'A: Bitang -> Piano -> Peric', ...
                  'B: Piano -> Bitang -> Peric', ...
@@ -43,10 +38,7 @@ risultati_TOF_Giorni = zeros(12,1);
 
 contatore = 1;
 
-fprintf('--- INIZIO OTTIMIZZAZIONE MULTI-OBIETTIVO (dV e TOF) ---\n');
-fprintf('Calcolo in corso per 12 combinazioni con ricerca del percorso minimo (Shortest Path)...\n\n');
-
-% --- 3. CICLO DI OTTIMIZZAZIONE ---
+% CICLO DI OTTIMIZZAZIONE
 for seq = 1:3
     for bit = 1:4
         tipo_b = tipi_bitangente{bit};
@@ -91,8 +83,7 @@ for seq = 1:3
                     th_pe_f = thf_pe(2); 
                 end
                 
-                dt3 = TOF(a_f, e_f, th_pe_f, th_f, mu);                % Coasting verso pos. finale
-                
+                dt3 = TOF(a_f, e_f, th_pe_f, th_f, mu);
                 TOF_tot = dt0 + dt_b + dt1 + dt2 + dt3;
                 
             case 2 % B: Piano -> Bitang -> Peric
@@ -125,7 +116,7 @@ for seq = 1:3
                 
                 TOF_tot = dt0 + dt1 + dt_b + dt2 + dt3;
                 
-            case 3 % C: Piano -> Pericentro -> Bitangente (STRATEGIA STANDARD)
+            case 3 % C: Piano -> Pericentro -> Bitangente (Standard)
                 % 1. Cambio Piano
                 [dV_pl, om_mid, th_node_base] = changeOrbitalPlane(a_i, e_i, i_i, OM_i, om_i, i_f, OM_f, mu);
                 
@@ -171,7 +162,7 @@ for seq = 1:3
     end
 end
 
-% --- 4. CREAZIONE E ORDINAMENTO DELLA TABELLA ---
+% Tabella
 TabellaRisultati = table(risultati_Sequenza, risultati_Bitangente, ...
     risultati_dV_Bitangente, risultati_dV_Piano, risultati_dV_Pericentro, risultati_dV_Totale, risultati_TOF_Giorni, ...
     'VariableNames', {'Sequenza', 'Tipo_Bitang', 'dV_Bit', 'dV_Piano', 'dV_Peric', 'dV_TOT', 'TOF_Giorni'});
@@ -189,24 +180,29 @@ fprintf('Costo Totale:     %.4f km/s\n', migliore.dV_TOT);
 fprintf('Tempo Richiesto:  %.2f Giorni\n', migliore.TOF_Giorni);
 fprintf('*******************************************************\n\n');
 
-
-% =========================================================================
-% 5. PLOT 3D: STRATEGIA STANDARD (Piano -> Pericentro -> Bitangente 'pa')
-% =========================================================================
-% Ricalcolo forzato della cinematica per la sequenza Standard
+% PLOT 3D: STRATEGIA STANDARD
 [~, om_mid, th_node_base] = changeOrbitalPlane(a_i, e_i, i_i, OM_i, om_i, i_f, OM_f, mu);
-
 th_n1 = mod(th_node_base, 2*pi); 
 th_n2 = mod(th_node_base + pi, 2*pi);
 dt0_1 = TOF(a_i, e_i, th_i, th_n1, mu);
 dt0_2 = TOF(a_i, e_i, th_i, th_n2, mu);
-if dt0_1 < dt0_2, th_node = th_n1; else, th_node = th_n2; end
+
+if dt0_1 < dt0_2
+    th_node = th_n1; 
+else
+    th_node = th_n2; 
+end
 
 [~, thi_pe, thf_pe] = changePericenterArg(a_i, e_i, om_mid, om_f, mu);
 
 dt1_1 = TOF(a_i, e_i, th_node, thi_pe(1), mu);
 dt1_2 = TOF(a_i, e_i, th_node, thi_pe(2), mu);
-if dt1_1 < dt1_2, th_pe_start = thi_pe(1); else, th_pe_start = thi_pe(2); end
+
+if dt1_1 < dt1_2
+    th_pe_start = thi_pe(1);
+else
+    th_pe_start = thi_pe(2);
+end
 
 % Per il bitangente 'pa', partenza dal pericentro (0) e arrivo all'apocentro (pi)
 th_start_b = 0; 
@@ -217,7 +213,6 @@ r2_mag = a_f*(1+e_f);
 a_t = (r1_mag + r2_mag) / 2;
 e_t = abs(r2_mag - r1_mag) / (r1_mag + r2_mag);
 
-% --- SETUP FIGURA ---
 fig_std = figure('Name', 'Strategia Standard (Piano -> Pericentro -> Bitangente pa)', 'Units','normalized','Position',[0.1 0.1 0.8 0.8]);
 ax = axes;
 set(ax, 'Color','k', 'XColor','w', 'YColor','w', 'ZColor','w');
@@ -243,7 +238,7 @@ end
 
 th_vec_plot = linspace(0, 2*pi, 300);
 
-% --- PLOT ORBITE (Colori Immagine) ---
+% PLOT ORBITE
 % 1. Iniziale (Blu)
 plotOrbit_ottimizz(a_i, e_i, i_i, OM_i, om_i, mu, th_vec_plot, [0 0.447 0.741], '-', 1.5, 'Orbita Iniziale');
 
@@ -260,7 +255,6 @@ plotOrbit_ottimizz(a_t, e_t, i_f, OM_f, om_f, mu, th_vec_trasf, [0.635 0.078 0.1
 % 5. Finale Target (Verde Spessa)
 plotOrbit_ottimizz(a_f, e_f, i_f, OM_f, om_f, mu, th_vec_plot, [0.466 0.674 0.188], '-', 2.5, 'Orbita Finale Target');
 
-% --- MARKERS ---
 % M1: Cambio Piano
 [r_m1,~] = par2car(a_i, e_i, i_i, OM_i, om_i, th_node, mu);
 plot3(r_m1(1), r_m1(2), r_m1(3), '^k', 'MarkerSize', 11, 'MarkerFaceColor', [0.494 0.184 0.556], 'DisplayName', 'M1: Cambio Piano');
