@@ -228,7 +228,7 @@ plot3(arrayfun(@(th) get_c(a_park,e_park,i_i,OM_i,om_i,th,1), th_vec_full), ...
       arrayfun(@(th) get_c(a_park,e_park,i_i,OM_i,om_i,th,3), th_vec_full), ...
       'Color', [0.9290 0.6940 0.1250], 'LineStyle', '-', 'LineWidth', 1.5, 'DisplayName', 'Appoggio (Pre-Plane)');
 
-% Marker Cambio Piano (Triangolo Grande Sotto)
+% Marker Cambio Piano
 [r_plane,~] = par2car(a_park, e_park, i_i, OM_i, om_i, th_plane_tmp, mu);
 plot3(r_plane(1), r_plane(2), r_plane(3), '^k', 'MarkerSize', 14, 'MarkerFaceColor', [0.4940 0.1840 0.5560], 'DisplayName', 'Cambio Piano');
 
@@ -248,7 +248,6 @@ plot3(arrayfun(@(th) get_c(a_park,e_park,i_f,OM_f,om_f,th,1), th_vec_full), ...
       arrayfun(@(th) get_c(a_park,e_park,i_f,OM_f,om_f,th,3), th_vec_full), ...
       'Color', [0.3010 0.7450 0.9330], 'LineStyle', '-', 'LineWidth', 1.5, 'DisplayName', 'Appoggio (Post-Peri)');
 
-% --- DISEGNO DINAMICO DELLA MANOVRA FINALE E MARKER DI ARRIVO ---
 if opzione(1) == 'A'
     % Ricostruisco l'ellisse della bitangente
     if idx_bitang2 == 1 || idx_bitang2 == 4
