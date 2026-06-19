@@ -21,12 +21,10 @@ i_A  = 3.78 * (pi/180);
 OM_A = 187.92 * (pi/180);   
 om_A = 60.16 * (pi/180);    
 
-
 % parametri di ottimizzazione
 tolleranza_DV = 0.0001; % Tolleranza per fermare la ricerca [km/s]
 max_iter      = 10;     % Numero massimo di iterazioni (zoom-in) per sicurezza
 N_punti       = 301;    % Punti per griglia (numero dispari per convergenza monotona)
-
 
 % Centri iniziali e ampiezze (dimensione iniziale da 0 a 2pi)
 centro_th1 = pi; ampiezza_th1 = pi; 
