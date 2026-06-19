@@ -25,9 +25,7 @@ function [interseca, th1_int, th2_int] = orbit_intersection(a1, e1, om1, a2, e2,
         % 2. Ordino i valori dell'Orbita 1 dal più piccolo al più grande
         [th1_int, idx_sort] = sort(th1_grezz);
         
-        % 3. Riordino anche l'Orbita 2 usando gli stessi indici!
-        % (Questo garantisce che th1_int(1) e th2_int(1) siano 
-        % FISICAMENTE lo stesso punto di scontro nello spazio).
+        % 3. Riordino anche l'Orbita 2 usando gli stessi indici
         th2_int = th2_grezz(idx_sort);
         
     else
