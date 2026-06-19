@@ -69,7 +69,7 @@ function [c, ceq] = constraints(x, ast)
     aT = (r1_mag * (1 + eT * cos(th1_T))) / (1 - eT^2);
     rpT = aT * (1 - eT);
     
-    % --- VINCOLI DI DISUGUAGLIANZA (c <= 0) ---
+    % --- VINCOLI ---
     c(1) = eT - 0.999;               % Deve essere ellittica chiusa
     c(2) = -eT;                      % Eccentricità >= 0
     c(3) = (R_sun + 50000000) - rpT; % Non colpire il Sole

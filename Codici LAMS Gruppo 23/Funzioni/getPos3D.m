@@ -1,7 +1,4 @@
 function r_ijk = getPos3D(a, e, i, OM, om, th)
-    % GETPOS3D: Calcola il vettore posizione 3D [X; Y; Z] per una data anomalia vera
-    % questa esiste già simile per il codice a 1 impulso magari sarebbe da
-    % unificare e renderla uguale 
     r = (a*(1 - e^2)) / (1 + e*cos(th));
     
     % Vettore in componenti perifocali (piano dell'orbita)
