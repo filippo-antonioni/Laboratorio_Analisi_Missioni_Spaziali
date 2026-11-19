@@ -1,0 +1,8 @@
+# Salvataggi automatici e file locali
+*.asv
+*.m~
+*.slxc
+.DS_Store
+Thumbs.db
+~$*
+/materiale-privato/
